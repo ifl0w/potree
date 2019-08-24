@@ -69,6 +69,11 @@ let shaders = [
 	"src/materials/shaders/edl.fs",
 	"src/materials/shaders/blur.vs",
 	"src/materials/shaders/blur.fs",
+
+	// WebGL 2.0 Compute Demo
+	"src/materials/shaders/compute/render.compute.glsl",
+	"src/materials/shaders/compute/quad.vertex.glsl",
+	"src/materials/shaders/compute/quad.fragment.glsl"
 ];
 
 // For development, it is now possible to use 'gulp webserver'
@@ -436,6 +441,7 @@ gulp.task('watch', gulp.parallel("build", "pack", "webserver", async function() 
 		'src/**/*.html',
 		'src/**/*.vs',
 		'src/**/*.fs',
+		'src/**/*.glsl',
 		'resources/**/*',
 		'examples//**/*.json',
 		'!resources/icons/index.html',

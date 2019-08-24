@@ -1,9 +1,12 @@
 
 import {ClipTask, ClipMethod, CameraMode, LengthUnits} from "../defines.js";
+
 import {Renderer} from "../PotreeRenderer.js";
 import {PotreeRenderer} from "./PotreeRenderer.js";
 import {EDLRenderer} from "./EDLRenderer.js";
 import {HQSplatRenderer} from "./HQSplatRenderer.js";
+import {ComputeSceneRenderer} from "./renderer/ComputeSceneRenderer"
+
 import {Scene} from "./Scene.js";
 import {ClippingTool} from "../utils/ClippingTool.js";
 import {TransformationTool} from "../utils/TransformationTool.js";
@@ -22,6 +25,7 @@ import {FirstPersonControls} from "../navigation/FirstPersonControls.js";
 import {EarthControls} from "../navigation/EarthControls.js";
 import {DeviceOrientationControls} from "../navigation/DeviceOrientationControls.js";
 import { EventDispatcher } from "../EventDispatcher.js";
+import {ComputePointCloudRenderer} from "./renderer/ComputePointCloudRenderer";
 
 
 
@@ -136,7 +140,12 @@ export class Viewer extends EventDispatcher{
 		this.background = null;
 		this.defaultGPSTimeChanged = false;
 
-		this.initThree();
+        this.useComputeShader = args.useComputeShader;
+		if (args.useComputeShader) {
+		    this.initThreeCompute()
+        } else {
+            this.initThree();
+        }
 		this.prepareVR();
 
 		this.prepareVR();
@@ -161,9 +170,13 @@ export class Viewer extends EventDispatcher{
 				-1000, 1000
 			);
 		}
-		
-		this.pRenderer = new Renderer(this.renderer);
-		
+
+		if (args.useComputeShader) {
+			this.pRenderer = new ComputePointCloudRenderer(this.renderer);
+		} else {
+			this.pRenderer = new Renderer(this.renderer);
+		}
+
 		{
 			let near = 2.5;
 			let far = 10.0;
@@ -1125,6 +1138,52 @@ export class Viewer extends EventDispatcher{
 		
 	}
 
+    initThreeCompute () {
+        let width = this.renderArea.clientWidth;
+        let height = this.renderArea.clientHeight;
+
+        // let contextAttributes = {
+        // 	alpha: true,
+        // 	depth: true,
+        // 	stencil: false,
+        // 	antialias: false,
+        // 	//premultipliedAlpha: _premultipliedAlpha,
+        // 	preserveDrawingBuffer: true,
+        // 	powerPreference: "high-performance",
+        // };
+
+        let contextAttributes = {
+            alpha: false,
+            preserveDrawingBuffer: true,
+        };
+
+        // let contextAttributes = {
+        // 	alpha: false,
+        // 	preserveDrawingBuffer: true,
+        // };
+
+        let canvas = document.createElement("canvas");
+
+		let context = canvas.getContext('webgl2-compute', contextAttributes );
+		// let context = canvas.getContext('webgl2', contextAttributes );
+
+        this.renderer = new THREE.WebGLRenderer({
+            alpha: true,
+            premultipliedAlpha: false,
+            canvas: canvas,
+            context: context});
+        this.renderer.sortObjects = false;
+        this.renderer.setSize(width, height);
+        this.renderer.autoClear = false;
+        this.renderArea.appendChild(this.renderer.domElement);
+        this.renderer.domElement.tabIndex = '2222';
+        this.renderer.domElement.style.position = 'absolute';
+        this.renderer.domElement.addEventListener('mousedown', () => {
+            this.renderer.domElement.focus();
+        });
+
+    }
+
 	async prepareVR(){
 
 		if(!navigator.getVRDisplays){
@@ -1661,30 +1720,38 @@ export class Viewer extends EventDispatcher{
 
 			let pRenderer = null;
 
-			if(this.useHQ){
-				if (!this.hqRenderer) {
-					this.hqRenderer = new HQSplatRenderer(this);
+			if (this.useComputeShader) {
+				if (!this.webGL2ComputeRenderer) {
+					this.webGL2ComputeRenderer = new ComputeSceneRenderer(this);
 				}
-				this.hqRenderer.useEDL = this.useEDL;
-				//this.hqRenderer.render(this.renderer);
 
-				pRenderer = this.hqRenderer;
-			}else{
-				if (this.useEDL && Features.SHADER_EDL.isSupported()) {
-					if (!this.edlRenderer) {
-						this.edlRenderer = new EDLRenderer(this);
+				pRenderer = this.webGL2ComputeRenderer;
+			} else {
+				if(this.useHQ){
+					if (!this.hqRenderer) {
+						this.hqRenderer = new HQSplatRenderer(this);
 					}
-					//this.edlRenderer.render(this.renderer);
-					pRenderer = this.edlRenderer;
-				} else {
-					if (!this.potreeRenderer) {
-						this.potreeRenderer = new PotreeRenderer(this);
+					this.hqRenderer.useEDL = this.useEDL;
+					//this.hqRenderer.render(this.renderer);
+
+					pRenderer = this.hqRenderer;
+				}else{
+					if (this.useEDL && Features.SHADER_EDL.isSupported()) {
+						if (!this.edlRenderer) {
+							this.edlRenderer = new EDLRenderer(this);
+						}
+						//this.edlRenderer.render(this.renderer);
+						pRenderer = this.edlRenderer;
+					} else {
+						if (!this.potreeRenderer) {
+							this.potreeRenderer = new PotreeRenderer(this);
+						}
+						//this.potreeRenderer.render();
+						pRenderer = this.potreeRenderer;
 					}
-					//this.potreeRenderer.render();
-					pRenderer = this.potreeRenderer;
 				}
 			}
-			
+
 			const vr = this.vr;
 			const vrActive = (vr && vr.display.isPresenting);
 
