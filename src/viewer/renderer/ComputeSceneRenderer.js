@@ -67,31 +67,31 @@ export class ComputeSceneRenderer {
 		});
 
 		// render scene
-		// renderer.render(viewer.scene.scene, camera);
-		//
-		// viewer.dispatchEvent({type: "render.pass.scene",viewer: viewer});
-		//
-		// viewer.clippingTool.update();
-		// renderer.render(viewer.clippingTool.sceneMarker, viewer.scene.cameraScreenSpace); //viewer.scene.cameraScreenSpace);
-		// renderer.render(viewer.clippingTool.sceneVolume, camera);
-		//
-		// renderer.render(viewer.controls.sceneControls, camera);
-		//
-		// renderer.clearDepth();
-		//
-		// viewer.transformationTool.update();
-		//
-		// viewer.dispatchEvent({type: "render.pass.perspective_overlay",viewer: viewer});
-		//
-		// renderer.render(viewer.controls.sceneControls, camera);
-		// renderer.render(viewer.clippingTool.sceneVolume, camera);
-		// renderer.render(viewer.transformationTool.scene, camera);
-		//
-		// renderer.setViewport(width - viewer.navigationCube.width,
-		// 	height - viewer.navigationCube.width,
-		// 	viewer.navigationCube.width, viewer.navigationCube.width);
-		// renderer.render(viewer.navigationCube, viewer.navigationCube.camera);
-		// renderer.setViewport(0, 0, width, height);
+		renderer.render(viewer.scene.scene, camera);
+
+		viewer.dispatchEvent({type: "render.pass.scene",viewer: viewer});
+
+		viewer.clippingTool.update();
+		renderer.render(viewer.clippingTool.sceneMarker, viewer.scene.cameraScreenSpace); //viewer.scene.cameraScreenSpace);
+		renderer.render(viewer.clippingTool.sceneVolume, camera);
+
+		renderer.render(viewer.controls.sceneControls, camera);
+
+		renderer.clearDepth();
+
+		viewer.transformationTool.update();
+
+		viewer.dispatchEvent({type: "render.pass.perspective_overlay",viewer: viewer});
+
+		renderer.render(viewer.controls.sceneControls, camera);
+		renderer.render(viewer.clippingTool.sceneVolume, camera);
+		renderer.render(viewer.transformationTool.scene, camera);
+
+		renderer.setViewport(width - viewer.navigationCube.width,
+			height - viewer.navigationCube.width,
+			viewer.navigationCube.width, viewer.navigationCube.width);
+		renderer.render(viewer.navigationCube, viewer.navigationCube.camera);
+		renderer.setViewport(0, 0, width, height);
 
 		// renderer.render(viewer.transformationTool.scene, camera);
 

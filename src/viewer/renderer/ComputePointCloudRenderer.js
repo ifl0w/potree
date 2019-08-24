@@ -10,6 +10,7 @@ import {RenderTarget} from "./RenderTarget";
 import {Texture} from "./Texture";
 import {Plane} from "./meshes/Plane";
 import {PointBuffer} from "./PointBuffer";
+import {ModelMatrixBuffer} from "./ModelMatrixBuffer";
 
 // Copied from three.js: WebGLRenderer.js
 function paramThreeToGL(_gl, p) {
@@ -171,7 +172,10 @@ export class ComputePointCloudRenderer {
 		this.gl = this.threeRenderer.context;
 
 		this.renderTexture = new Texture(this.gl, 1000, 1000, true);
-		this.pointBuffer = new PointBuffer(this.gl, 1000 ^ 2);
+		this.pointBuffer = new PointBuffer(this.gl, 10000);
+		this.modelMatrixBuffer = new ModelMatrixBuffer(this.gl, 5000);
+		// this.pointBuffer.fillRandom();
+		// this.modelMatrixBuffer.addModelMatrix(new Float32Array(new THREE.Matrix4().elements));
 
 		this.pointCloudShader = new Shader(this.gl, "PointCloudComputeShader");
 		this.pointCloudShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['render.compute.glsl']);
@@ -322,24 +326,27 @@ export class ComputePointCloudRenderer {
 			let world = node.sceneNode.matrixWorld;
 			worldView.multiplyMatrices(view, world);
 
-			shader.setUniformMatrix4("modelMatrix", world);
+			// shader.setUniformMatrix4("modelMatrix", world);
 			shader.setUniformMatrix4("modelViewMatrix", worldView);
 
 			let geometry = node.geometryNode.geometry;
 
-			// this.pointBuffer.setPositions(geometry.attributes.position);
-			// this.pointBuffer.fillRandom();
+			let modelMatrixIndex = this.modelMatrixBuffer.addModelMatrix(new Float32Array(world.elements));
+			this.pointBuffer.addPositions(geometry.attributes.position.array, modelMatrixIndex);
+
+			// this.pointBuffer.setPositions(geometry.attributes.position.array);
+			// this.pointBuffer.setColor(geometry.attributes.rgb.array);
 			//
 			// this.gl.bindBufferBase(this.gl.SHADER_STORAGE_BUFFER, 0, this.pointBuffer.ssbo);
 			// this.gl.bindImageTexture(0, this.renderTexture.texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA16F);
-			// this.gl.dispatchCompute(Math.ceil(this.renderTexture.width/16), Math.ceil(this.renderTexture.height/16), 1);
+			// this.gl.dispatchCompute(Math.ceil(this.pointBuffer.size/16), Math.ceil(this.pointBuffer.size/16), 1);
+
+			i++;
 		}
 
-		// this.pointBuffer.fillRandom();
-
-		this.gl.bindBufferBase(this.gl.SHADER_STORAGE_BUFFER, 0, this.pointBuffer.ssbo);
-		this.gl.bindImageTexture(0, this.renderTexture.texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA16F);
-		this.gl.dispatchCompute(Math.ceil(this.renderTexture.width/16), Math.ceil(this.renderTexture.height/16), 1);
+		this.renderBuffer(camera);
+		this.pointBuffer.clear();
+		this.modelMatrixBuffer.clear();
 
 		if (exports.measureTimings) {
 			performance.mark("renderNodes-end");
@@ -1154,15 +1161,18 @@ export class ComputePointCloudRenderer {
 
 		const traversalResult = this.traverse(scene);
 
-
 		// RENDER
 		this.clearImageBuffer();
 		for (const octree of traversalResult.octrees) {
 			let nodes = octree.visibleNodes;
 			this.renderOctree(octree, nodes, camera, target, params);
+
+			// let count = 0;
+			// nodes.forEach((n) => count += n.geometryNode.numPoints);
+			// console.log(count);
 		}
-		// this.renderTest();
-		this.drawImageBuffer();
+		// this.renderBuffer(camera);
+		this.resolveBuffer();
 
 		// CLEANUP
 		gl.activeTexture(gl.TEXTURE1);
@@ -1171,19 +1181,23 @@ export class ComputePointCloudRenderer {
 		this.threeRenderer.state.reset();
 	}
 
-	renderTest() {
+	renderBuffer(camera) {
 		this.gl.disable(this.gl.DEPTH_TEST);
-
-		// this.pointBuffer.update();
 
 		// render points to texture
 		this.pointCloudShader.use();
+
+		this.pointCloudShader.setUniformMatrix4("viewMatrix", camera.matrixWorldInverse);
+		this.pointCloudShader.setUniformMatrix4("projectionMatrix", camera.projectionMatrix);
+
 		this.gl.bindBufferBase(this.gl.SHADER_STORAGE_BUFFER, 0, this.pointBuffer.ssbo);
+		this.gl.bindBufferBase(this.gl.SHADER_STORAGE_BUFFER, 1, this.pointBuffer.modelMatrixMap);
+		this.gl.bindBufferBase(this.gl.SHADER_STORAGE_BUFFER, 2, this.modelMatrixBuffer.ssbo);
 		this.gl.bindImageTexture(0, this.renderTexture.texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA16F);
-		this.gl.dispatchCompute(Math.ceil(this.renderTexture.width/16), Math.ceil(this.renderTexture.height/16), 1);
+		this.gl.dispatchCompute(Math.ceil(this.pointBuffer.size/16), Math.ceil(this.pointBuffer.size/16), 1);
 	}
 
-	drawImageBuffer() {
+	resolveBuffer() {
 		// Draw full screen quad
 		this.drawQuadShader.use();
 		this.renderTexture.bind(0);

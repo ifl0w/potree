@@ -21,10 +21,10 @@ export class Plane extends Mesh {
         ]);
 
         this.uv_coords = new Float32Array([
-            0, 2,
+            0, 1,
             0, 0,
-            2, 0,
-            2, 2
+            1, 0,
+            1, 1
         ]);
 
         this.generateBuffers();
