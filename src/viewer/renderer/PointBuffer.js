@@ -74,7 +74,7 @@ export class PointBuffer {
     addPositions(positions, modelMatrixIndex) {
         const positionBufferLength = (positions.length / 3) * 4;
 
-        if (this._currentByteOffset + positionBufferLength * 4 >= this.byteSize()) {
+        if (this._currentByteOffset + positionBufferLength * 4 > this.byteSize()) {
             return;
         }
 
@@ -99,8 +99,8 @@ export class PointBuffer {
 
         // fill model matrix index list
         gl.bindBuffer(gl.SHADER_STORAGE_BUFFER, this.modelMatrixMap);
-        const data = new Uint32Array(Array.from({length: positionBufferLength}, () => modelMatrixIndex));
-        gl.bufferSubData(gl.SHADER_STORAGE_BUFFER, this._currentByteOffset, data, 0); // TODO investigate if correct start index
+        const indexData = new Uint32Array(Array.from({length: positionBufferLength}, () => modelMatrixIndex));
+        gl.bufferSubData(gl.SHADER_STORAGE_BUFFER, this._currentByteOffset, indexData, 0);
 
         gl.bindBuffer(gl.SHADER_STORAGE_BUFFER, null);
 
@@ -108,11 +108,15 @@ export class PointBuffer {
     }
 
     lastIdx() {
-        return this._currentByteOffset / (4 * 4);
+        return this._currentByteOffset / (4 * 4) - 1;
     }
 
     byteSize() {
         return this.size * 4 * 4;
+    }
+
+    spaceLeft() {
+        return this.size - this.lastIdx();
     }
 
     positionArrayLength() {

@@ -320,6 +320,9 @@ export class ComputePointCloudRenderer {
 		let view = camera.matrixWorldInverse;
 		let worldView = new THREE.Matrix4();
 
+		let numTotalPoints = nodes.map(n => n.getNumPoints()).reduce((a,b) => a + b, 0);
+		let numPointsPerNode = Math.floor(this.pointBuffer.size / nodes.length);
+
 		let i = 0;
 		for (let node of nodes) {
 
@@ -331,8 +334,19 @@ export class ComputePointCloudRenderer {
 
 			let geometry = node.geometryNode.geometry;
 
+			const numArrayElements = Math.min(numPointsPerNode * 3, this.pointBuffer.spaceLeft() * 3);
+			const positions = new Float32Array(numArrayElements);
+			for (let i = 0; i < numArrayElements; i += 3) {
+				const rndIdx = Math.floor(Math.random() * node.getNumPoints()) * 3;
+
+				positions[i] = geometry.attributes.position.array[rndIdx];
+				positions[i + 1] = geometry.attributes.position.array[rndIdx + 1];
+				positions[i + 2] = geometry.attributes.position.array[rndIdx + 2];
+				// positions[i + 3] = 0; // potential future padding
+			}
+
 			let modelMatrixIndex = this.modelMatrixBuffer.addModelMatrix(new Float32Array(world.elements));
-			this.pointBuffer.addPositions(geometry.attributes.position.array, modelMatrixIndex);
+			this.pointBuffer.addPositions(positions, modelMatrixIndex);
 
 			// this.pointBuffer.setPositions(geometry.attributes.position.array);
 			// this.pointBuffer.setColor(geometry.attributes.rgb.array);
@@ -1187,6 +1201,7 @@ export class ComputePointCloudRenderer {
 		// render points to texture
 		this.pointCloudShader.use();
 
+		this.pointCloudShader.setUniform1i("lastIdx", this.pointBuffer.lastIdx());
 		this.pointCloudShader.setUniformMatrix4("viewMatrix", camera.matrixWorldInverse);
 		this.pointCloudShader.setUniformMatrix4("projectionMatrix", camera.projectionMatrix);
 

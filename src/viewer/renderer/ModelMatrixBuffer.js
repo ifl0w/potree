@@ -38,7 +38,7 @@ export class ModelMatrixBuffer {
     }
 
     addModelMatrix(modelMatrix) {
-        if (this._currentOffset + modelMatrix.length * 4 >= this.byteSize()) {
+        if (this._currentOffset + modelMatrix.length * 4 > this.byteSize()) {
             return;
         }
 
@@ -49,11 +49,11 @@ export class ModelMatrixBuffer {
 
         this._currentOffset += modelMatrix.length * 4;
 
-        return this.lastIdx() - 1;
+        return this.lastIdx();
     }
 
     lastIdx() {
-        return this._currentOffset / (4 * 16);
+        return this._currentOffset / (4 * 16) - 1;
     }
 
     byteSize() {
