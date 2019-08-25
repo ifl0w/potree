@@ -42,21 +42,17 @@ void main() {
 
     vec4 projectedPosition = projectionMatrix * position;
 
-    // NDC
+    // Perspective Divide
     vec4 ndcPosition = projectedPosition / projectedPosition.w;
 
-    // TODO: Clipping shadow frustum
+    // Clipping
     if (ndcPosition.x > 1.0 || ndcPosition.x < -1.0 ||
     ndcPosition.y > 1.0 || ndcPosition.y < -1.0 ||
-    ndcPosition.z < 0.0) {
-
-        // screenspace
-        ivec2 storePos = ivec2(ndcPosition.xy * vec2(500, 500) + vec2(500, 500));
-        imageStore(targetTexture, storePos, vec4(1,0,0,1));
-
+    ndcPosition.z > 1.0 || ndcPosition.z < -1.0 ) {
+        // ivec2 storePos = ivec2(ndcPosition.xy * vec2(500, 500) + vec2(500, 500));
+        // imageStore(targetTexture, storePos, vec4(1,0,0,1));
         return;
     }
-
 
     // screenspace
     ivec2 storePos = ivec2(ndcPosition.xy * vec2(500, 500) + vec2(500, 500));
