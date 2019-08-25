@@ -1,6 +1,7 @@
 #version 310 es
 
 precision mediump image2D;
+precision mediump float;
 
 uniform mat4 viewMatrix;
 uniform mat4 modelMatrix;
@@ -8,17 +9,17 @@ uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 
 layout(binding=0, rgba16f) uniform writeonly image2D targetTexture;
-layout(std430, binding=0) buffer PointBuffer
+layout(std140, binding=0) buffer PointBuffer
 {
-    vec3 points[];
+    vec4 points[]; // not tightly packed due to std140
 };
 
-layout(std430, binding=1) buffer MetaData
+layout(std140, binding=1) buffer MetaData
 {
-    uint modelMatrixIndices[];
+    ivec4 modelMatrixIndices[]; // vec4 for convenience; uses the same packing as the positions
 };
 
-layout(std430, binding=2) buffer ModelMatices
+layout(std140, binding=2) buffer ModelMatices
 {
     mat4 modelMatrices[];
 };
@@ -37,8 +38,8 @@ void main() {
 
 
 //    float pointIdx = mod(float(linearIdx), float(points.length()));
-    mat4 mvMatrix = viewMatrix * modelMatrices[modelMatrixIndices[linearIdx]];
-    vec4 position = mvMatrix * vec4(points[linearIdx], 1);
+    mat4 mvMatrix = viewMatrix * modelMatrices[modelMatrixIndices[linearIdx].x];
+    vec4 position = mvMatrix * vec4(points[linearIdx].xyz, 1);
 
     vec4 projectedPosition = projectionMatrix * position;
 

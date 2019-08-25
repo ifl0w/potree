@@ -326,7 +326,7 @@ export class ComputePointCloudRenderer {
 			let world = node.sceneNode.matrixWorld;
 			worldView.multiplyMatrices(view, world);
 
-			// shader.setUniformMatrix4("modelMatrix", world);
+			shader.setUniformMatrix4("modelMatrix", world);
 			shader.setUniformMatrix4("modelViewMatrix", worldView);
 
 			let geometry = node.geometryNode.geometry;
