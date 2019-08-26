@@ -172,6 +172,11 @@ export class ComputePointCloudRenderer {
 		this.gl = this.threeRenderer.context;
 
 		this.renderTexture = new Texture(this.gl, 1000, 1000, true);
+		this.positionTexture = new Texture(this.gl, 1000, 1000, true);
+
+		// this.renderSSBO = new SSBO(this.gl, 1000 * 1000, 4, 4);
+		// this.worldPositionSSBO = new SSBO(this.gl, 1000 * 1000, 4, 4);
+
 		this.pointBuffer = new PointBuffer(this.gl, 10000);
 		this.modelMatrixBuffer = new ModelMatrixBuffer(this.gl, 5000);
 		// this.pointBuffer.fillRandom();
@@ -187,6 +192,9 @@ export class ComputePointCloudRenderer {
 		this.drawQuadShader.linkProgram();
 
 		this.quad = new Plane(this.gl, 2, 2);
+
+		let lastFrameViewMatrix = new Float32Array(16);
+		let lastFrameProjectionMatrix = new Float32Array(16);
 
 		this.buffers = new Map();
 		this.shaders = new Map();
@@ -334,7 +342,7 @@ export class ComputePointCloudRenderer {
 
 			let geometry = node.geometryNode.geometry;
 
-			const numArrayElements = Math.min(numPointsPerNode * 3, this.pointBuffer.spaceLeft() * 3);
+			const numArrayElements = Math.min(numPointsPerNode * 3, this.pointBuffer.positionsSSBO.spaceLeft() * 3);
 			const positions = new Float32Array(numArrayElements);
 			for (let i = 0; i < numArrayElements; i += 3) {
 				const rndIdx = Math.floor(Math.random() * node.getNumPoints()) * 3;
@@ -347,13 +355,6 @@ export class ComputePointCloudRenderer {
 
 			let modelMatrixIndex = this.modelMatrixBuffer.addModelMatrix(new Float32Array(world.elements));
 			this.pointBuffer.addPositions(positions, modelMatrixIndex);
-
-			// this.pointBuffer.setPositions(geometry.attributes.position.array);
-			// this.pointBuffer.setColor(geometry.attributes.rgb.array);
-			//
-			// this.gl.bindBufferBase(this.gl.SHADER_STORAGE_BUFFER, 0, this.pointBuffer.ssbo);
-			// this.gl.bindImageTexture(0, this.renderTexture.texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA16F);
-			// this.gl.dispatchCompute(Math.ceil(this.pointBuffer.size/16), Math.ceil(this.pointBuffer.size/16), 1);
 
 			i++;
 		}
@@ -1201,15 +1202,18 @@ export class ComputePointCloudRenderer {
 		// render points to texture
 		this.pointCloudShader.use();
 
-		this.pointCloudShader.setUniform1i("lastIdx", this.pointBuffer.lastIdx());
+		this.pointCloudShader.setUniform1i("lastIdx", this.pointBuffer.positionsSSBO.lastIdx());
 		this.pointCloudShader.setUniformMatrix4("viewMatrix", camera.matrixWorldInverse);
 		this.pointCloudShader.setUniformMatrix4("projectionMatrix", camera.projectionMatrix);
 
-		this.gl.bindBufferBase(this.gl.SHADER_STORAGE_BUFFER, 0, this.pointBuffer.ssbo);
-		this.gl.bindBufferBase(this.gl.SHADER_STORAGE_BUFFER, 1, this.pointBuffer.modelMatrixMap);
+		this.pointBuffer.positionsSSBO.bind(0);
 		this.gl.bindBufferBase(this.gl.SHADER_STORAGE_BUFFER, 2, this.modelMatrixBuffer.ssbo);
 		this.gl.bindImageTexture(0, this.renderTexture.texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA16F);
+		this.gl.bindImageTexture(1, this.positionTexture.texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA16F);
 		this.gl.dispatchCompute(Math.ceil(this.pointBuffer.size/16), Math.ceil(this.pointBuffer.size/16), 1);
+
+		this.lastFrameViewMatrix = camera.matrixWorldInverse;
+		this.lastFrameProjectionMatrix = camera.projectionMatrix;
 	}
 
 	resolveBuffer() {

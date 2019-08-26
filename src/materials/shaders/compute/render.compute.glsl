@@ -11,14 +11,11 @@ uniform mat4 projectionMatrix;
 uniform int lastIdx;
 
 layout(binding=0, rgba16f) uniform writeonly image2D targetTexture;
+layout(binding=1, rgba16f) uniform writeonly image2D positionTexture;
+
 layout(std140, binding=0) buffer PointBuffer
 {
-    vec4 points[]; // not tightly packed due to std140
-};
-
-layout(std140, binding=1) buffer MetaData
-{
-    ivec4 modelMatrixIndices[]; // vec4 for convenience; uses the same packing as the positions
+    vec4 points[]; // xyz = position, w = modelMatrixIndex
 };
 
 layout(std140, binding=2) buffer ModelMatices
@@ -36,10 +33,13 @@ void main() {
         return;
     }
 
-    mat4 mvMatrix = viewMatrix * modelMatrices[modelMatrixIndices[linearIdx].x];
-    vec4 position = mvMatrix * vec4(points[linearIdx].xyz, 1);
+    vec4 pointData = points[linearIdx];
 
-    vec4 projectedPosition = projectionMatrix * position;
+    mat4 mMatrix = modelMatrices[int(pointData.w)];
+    vec4 worldPosition = mMatrix * vec4(pointData.xyz, 1);
+
+    mat4 viewProjectionMatrix = projectionMatrix * viewMatrix;
+    vec4 projectedPosition = viewProjectionMatrix * worldPosition;
 
     // Perspective Divide
     vec4 ndcPosition = projectedPosition / projectedPosition.w;
@@ -54,5 +54,6 @@ void main() {
     // screenspace
     ivec2 storePos = ivec2(ndcPosition.xy * vec2(500, 500) + vec2(500, 500));
 
+    imageStore(positionTexture, storePos, vec4(worldPosition));
     imageStore(targetTexture, storePos, vec4(1));
 }
