@@ -8,36 +8,48 @@ export class PointBuffer {
 
         this._currentByteOffset = 0;
 
+        // hard limit of 5000 nodes
+        this.modelMatrixSSBO = new SSBO(gl, 5000, 16, 4);
+
         // ssbo containing vec4 (xyz = position, w = modelMatrixIndex)
         this.positionsSSBO = new SSBO(gl, size, 4,4);
+
+        // ssbo containing colors as vec4
+        this.colorSSBO = new SSBO(gl, size, 4,4);
     }
 
     clear() {
+        this.modelMatrixSSBO.clear();
         this.positionsSSBO.clear();
+        this.colorSSBO.clear();
     }
 
-    setPositions(positions) {
-        this.positionsSSBO.setData(positions);
-    }
+    addGeometry(modelMatrix, geometry, numberOfPoints) {
 
-    addPositions(positions, modelMatrixIndex) {
-        const positionBufferLength = (positions.length / 3) * 4;
+        this.modelMatrixSSBO.appendData(modelMatrix);
 
-        // align content of buffer to multiples of 16; required by openGL packing layout std140
-        const newPos = new Float32Array(positionBufferLength);
-        let i = 1;
-        for (const pos of positions) {
-            if (i % 4 === 0) {
-                newPos[i-1] = modelMatrixIndex;
-                i++;
-            }
+        const numArrayElements = Math.min(numberOfPoints * 4, this.positionsSSBO.spaceLeft() * 4);
 
-            newPos[i-1] = pos;
-            i++;
+        const positions = new Float32Array(numArrayElements);
+        const colors = new Float32Array(numArrayElements);
+
+        for (let i = 0; i < numArrayElements; i += 4) {
+            const rnd = Math.random();
+            const rndPositionIdx = Math.floor(rnd * geometry.attributes.position.count) * 3;
+            const rndColorIdx = Math.floor(rnd * geometry.attributes.position.count) * 4;
+
+            positions[i] = geometry.attributes.position.array[rndPositionIdx];
+            positions[i + 1] = geometry.attributes.position.array[rndPositionIdx + 1];
+            positions[i + 2] = geometry.attributes.position.array[rndPositionIdx + 2];
+            positions[i + 3] = this.modelMatrixSSBO.lastIdx();
+
+            colors[i] = geometry.attributes.color.array[rndColorIdx] / 255;
+            colors[i + 1] = geometry.attributes.color.array[rndColorIdx + 1] / 255;
+            colors[i + 2] = geometry.attributes.color.array[rndColorIdx + 2] / 255;
+            colors[i + 3] = geometry.attributes.color.array[rndColorIdx + 3] / 255;
         }
-        newPos[i-1] = modelMatrixIndex; // last index will not be iterated; therefore added manually
 
-        // fill position and model matrix index
-        this.positionsSSBO.appendData(newPos);
+        this.positionsSSBO.appendData(positions);
+        this.colorSSBO.appendData(colors);
     }
 }

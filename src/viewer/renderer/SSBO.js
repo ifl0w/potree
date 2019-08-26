@@ -1,5 +1,5 @@
 export class SSBO {
-    constructor(gl, maxElementCount, elementSize, bytesPerComponent) {
+    constructor(gl, maxElementCount, elementSize, bytesPerComponent = 4) {
         this.gl = gl;
 
         this._maxElementCount = maxElementCount;
@@ -37,7 +37,7 @@ export class SSBO {
         gl.bufferSubData(gl.SHADER_STORAGE_BUFFER, 0, data, 0);
         gl.bindBuffer(gl.SHADER_STORAGE_BUFFER, null);
 
-        this._currentByteOffset = data.length * 4;
+        this._currentByteOffset = data.length * this._bytesPerComponent;
     }
 
     /**
@@ -46,7 +46,7 @@ export class SSBO {
      * @param data Float32Array
      */
     appendData(data) {
-        if (this._currentByteOffset + data.length * 4 > this.byteSize()) {
+        if (this._currentByteOffset + data.length * this._bytesPerComponent > this.byteSize()) {
             return;
         }
 
@@ -56,15 +56,15 @@ export class SSBO {
         gl.bufferSubData(gl.SHADER_STORAGE_BUFFER, this._currentByteOffset, data, 0);
         gl.bindBuffer(gl.SHADER_STORAGE_BUFFER, null);
 
-        this._currentByteOffset += data.length * 4;
+        this._currentByteOffset += data.length * this._bytesPerComponent;
     }
 
     lastIdx() {
-        return this._currentByteOffset / (4 * 4) - 1;
+        return this._currentByteOffset / (this._elementSize * this._bytesPerComponent) - 1;
     }
 
     byteSize() {
-        return this._maxElementCount * 4 * 4;
+        return this._maxElementCount * this._elementSize * this._bytesPerComponent;
     }
 
     spaceLeft() {
@@ -72,6 +72,6 @@ export class SSBO {
     }
 
     arrayLength() {
-        return this._maxElementCount * 4;
+        return this._maxElementCount * this._elementSize;
     }
 }
