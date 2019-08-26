@@ -11,6 +11,7 @@ import {Texture} from "./Texture";
 import {Plane} from "./meshes/Plane";
 import {PointBuffer} from "./PointBuffer";
 import {ModelMatrixBuffer} from "./ModelMatrixBuffer";
+import {SSBO} from "./SSBO";
 
 // Copied from three.js: WebGLRenderer.js
 function paramThreeToGL(_gl, p) {
@@ -171,16 +172,21 @@ export class ComputePointCloudRenderer {
 		this.threeRenderer = threeRenderer;
 		this.gl = this.threeRenderer.context;
 
-		this.renderTexture = new Texture(this.gl, 1000, 1000, true);
-		this.positionTexture = new Texture(this.gl, 1000, 1000, true);
+		this.renderTexture = [
+			new Texture(this.gl, 1000, 1000, true),
+			new Texture(this.gl, 1000, 1000, true),
+		];
+		this.positionTexture = [
+			new Texture(this.gl, 1000, 1000, true),
+			new Texture(this.gl, 1000, 1000, true),
+		];
+		this.pingPongIdx = 0;
 
-		// this.renderSSBO = new SSBO(this.gl, 1000 * 1000, 4, 4);
-		// this.worldPositionSSBO = new SSBO(this.gl, 1000 * 1000, 4, 4);
+		this.renderSSBO = new SSBO(this.gl, 1000 * 1000, 4, 4);
+		this.worldPositionSSBO = new SSBO(this.gl, 1000 * 1000, 4, 4);
 
-		this.pointBuffer = new PointBuffer(this.gl, 10000);
+		this.pointBuffer = new PointBuffer(this.gl, 20000);
 		this.modelMatrixBuffer = new ModelMatrixBuffer(this.gl, 5000);
-		// this.pointBuffer.fillRandom();
-		// this.modelMatrixBuffer.addModelMatrix(new Float32Array(new THREE.Matrix4().elements));
 
 		this.pointCloudShader = new Shader(this.gl, "PointCloudComputeShader");
 		this.pointCloudShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['render.compute.glsl']);
@@ -193,8 +199,8 @@ export class ComputePointCloudRenderer {
 
 		this.quad = new Plane(this.gl, 2, 2);
 
-		let lastFrameViewMatrix = new Float32Array(16);
-		let lastFrameProjectionMatrix = new Float32Array(16);
+		this.lastFrameViewMatrix = new Float32Array(16);
+		this.lastFrameProjectionMatrix = new Float32Array(16);
 
 		this.buffers = new Map();
 		this.shaders = new Map();
@@ -313,12 +319,7 @@ export class ComputePointCloudRenderer {
 		return result;
 	}
 
-
-
 	renderNodes(octree, nodes, visibilityTextureData, camera, target, shader, params) {
-
-		//console.log(`renderNodes: ${nodes.length}`);
-
 		if (exports.measureTimings) performance.mark("renderNodes-start");
 
 		let gl = this.gl;
@@ -358,10 +359,6 @@ export class ComputePointCloudRenderer {
 
 			i++;
 		}
-
-		this.renderBuffer(camera);
-		this.pointBuffer.clear();
-		this.modelMatrixBuffer.clear();
 
 		if (exports.measureTimings) {
 			performance.mark("renderNodes-end");
@@ -1178,15 +1175,16 @@ export class ComputePointCloudRenderer {
 
 		// RENDER
 		this.clearImageBuffer();
+
 		for (const octree of traversalResult.octrees) {
 			let nodes = octree.visibleNodes;
 			this.renderOctree(octree, nodes, camera, target, params);
-
-			// let count = 0;
-			// nodes.forEach((n) => count += n.geometryNode.numPoints);
-			// console.log(count);
 		}
-		// this.renderBuffer(camera);
+
+		this.reprojectAndRenderPoints(camera);
+		this.pointBuffer.clear();
+		this.modelMatrixBuffer.clear();
+
 		this.resolveBuffer();
 
 		// CLEANUP
@@ -1196,38 +1194,63 @@ export class ComputePointCloudRenderer {
 		this.threeRenderer.state.reset();
 	}
 
-	renderBuffer(camera) {
-		this.gl.disable(this.gl.DEPTH_TEST);
-
+	reprojectAndRenderPoints(camera) {
 		// render points to texture
 		this.pointCloudShader.use();
 
 		this.pointCloudShader.setUniform1i("lastIdx", this.pointBuffer.positionsSSBO.lastIdx());
 		this.pointCloudShader.setUniformMatrix4("viewMatrix", camera.matrixWorldInverse);
 		this.pointCloudShader.setUniformMatrix4("projectionMatrix", camera.projectionMatrix);
+		this.pointCloudShader.setUniformMatrix4("lastFrameViewMatrix", this.lastFrameViewMatrix);
+		this.pointCloudShader.setUniformMatrix4("lastFrameProjectionMatrix", this.lastFrameProjectionMatrix);
 
 		this.pointBuffer.positionsSSBO.bind(0);
 		this.gl.bindBufferBase(this.gl.SHADER_STORAGE_BUFFER, 2, this.modelMatrixBuffer.ssbo);
-		this.gl.bindImageTexture(0, this.renderTexture.texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA16F);
-		this.gl.bindImageTexture(1, this.positionTexture.texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA16F);
-		this.gl.dispatchCompute(Math.ceil(this.pointBuffer.size/16), Math.ceil(this.pointBuffer.size/16), 1);
+
+		this.gl.bindImageTexture(0, this.renderTexture[this.pingPong(true)].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
+		this.gl.bindImageTexture(1, this.positionTexture[this.pingPong(true)].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
+		this.gl.bindImageTexture(2, this.renderTexture[this.pingPong(false)].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
+		this.gl.bindImageTexture(3, this.positionTexture[this.pingPong(false)].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
+
+		// maximum of
+		let maxOps = Math.max(this.renderTexture[this.pingPong(false)].width,
+			this.renderTexture[this.pingPong(false)].height,
+			this.pointBuffer.size);
+
+		this.gl.dispatchCompute(
+			Math.ceil(maxOps/16),
+			Math.ceil(maxOps/16),
+			1);
 
 		this.lastFrameViewMatrix = camera.matrixWorldInverse;
 		this.lastFrameProjectionMatrix = camera.projectionMatrix;
 	}
 
 	resolveBuffer() {
+		this.gl.disable(this.gl.DEPTH_TEST);
+
 		// Draw full screen quad
 		this.drawQuadShader.use();
-		this.renderTexture.bind(0);
-		this.drawQuadShader.setUniformTexture('renderTexture', this.renderTexture.texture);
+		this.renderTexture[this.pingPong(true)].bind(0);
+		this.drawQuadShader.setUniformTexture('renderTexture', this.renderTexture[this.pingPong(true)].texture);
+
 		this.gl.bindVertexArray(this.quad.vao);
 		this.gl.drawElements(this.gl.TRIANGLES, 6, this.gl.UNSIGNED_SHORT, 0);
 		this.gl.bindVertexArray(null);
 	}
 
 	clearImageBuffer() {
-		this.renderTexture.clear();
+		this.renderTexture[this.pingPong(false)].clear();
+		this.positionTexture[this.pingPong(false)].clear();
+		this.pingPongIdx = this.pingPongIdx === 0 ? 1 : 0; // swap textures
+	}
+
+	pingPong(writeTarget) {
+		if (writeTarget) {
+			return this.pingPongIdx === 0 ? 1 : 0;
+		} else {
+			return this.pingPongIdx === 1 ? 1 : 0;
+		}
 	}
 }
 

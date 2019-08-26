@@ -10,8 +10,10 @@ uniform mat4 projectionMatrix;
 
 uniform int lastIdx;
 
-layout(binding=0, rgba16f) uniform writeonly image2D targetTexture;
-layout(binding=1, rgba16f) uniform writeonly image2D positionTexture;
+layout(binding=0, rgba32f) uniform writeonly image2D colorTexture;
+layout(binding=1, rgba32f) uniform writeonly image2D positionTexture;
+layout(binding=2, rgba32f) uniform readonly image2D readColorTexture;
+layout(binding=3, rgba32f) uniform readonly image2D readPositionTexture;
 
 layout(std140, binding=0) buffer PointBuffer
 {
@@ -27,6 +29,38 @@ layout(std140, binding=2) buffer ModelMatices
 layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 void main() {
+    mat4 viewProjectionMatrix = projectionMatrix * viewMatrix;
+
+    /*
+        ### REPROJECTION
+    */
+    vec4 lastColor = imageLoad(readColorTexture, ivec2(gl_GlobalInvocationID.xy));
+    vec4 lastWorldPos = imageLoad(readPositionTexture, ivec2(gl_GlobalInvocationID.xy));
+
+    if (lastColor != vec4(0)) {
+        vec4 newColor = lastColor;
+        vec4 reprojectedPosition = viewProjectionMatrix * lastWorldPos;
+
+        // Perspective Divide
+        vec4 reprojectedNDCPosition = reprojectedPosition / reprojectedPosition.w;
+
+        // Clipping
+        if (reprojectedNDCPosition.x > 1.0 || reprojectedNDCPosition.x < -1.0 ||
+        reprojectedNDCPosition.y > 1.0 || reprojectedNDCPosition.y < -1.0 ||
+        reprojectedNDCPosition.z > 1.0 || reprojectedNDCPosition.z < -1.0 ) {
+            // Skip
+        } else {
+            // screenspace
+            ivec2 storePos = ivec2(reprojectedNDCPosition.xy * vec2(500, 500) + vec2(500, 500));
+
+            imageStore(colorTexture, storePos, newColor);
+            imageStore(positionTexture, storePos, lastWorldPos); // world position does not change
+        }
+    }
+    /*
+        ### NEW Points
+    */
+
     uint linearIdx = gl_GlobalInvocationID.x * gl_GlobalInvocationID.y + gl_GlobalInvocationID.x;
 
     if (linearIdx >= uint(lastIdx)) {
@@ -38,7 +72,6 @@ void main() {
     mat4 mMatrix = modelMatrices[int(pointData.w)];
     vec4 worldPosition = mMatrix * vec4(pointData.xyz, 1);
 
-    mat4 viewProjectionMatrix = projectionMatrix * viewMatrix;
     vec4 projectedPosition = viewProjectionMatrix * worldPosition;
 
     // Perspective Divide
@@ -52,8 +85,8 @@ void main() {
     }
 
     // screenspace
-    ivec2 storePos = ivec2(ndcPosition.xy * vec2(500, 500) + vec2(500, 500));
+    ivec2 storePos = ivec2((ndcPosition.xy * vec2(0.5) + vec2(0.5)) * vec2(1000, 1000));
 
     imageStore(positionTexture, storePos, vec4(worldPosition));
-    imageStore(targetTexture, storePos, vec4(1));
+    imageStore(colorTexture, storePos, vec4(1));
 }
