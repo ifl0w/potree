@@ -171,20 +171,13 @@ export class ComputePointCloudRenderer {
 		this.threeRenderer = threeRenderer;
 		this.gl = this.threeRenderer.context;
 
-		this.renderTexture = [
-			new Texture(this.gl, 1000, 1000, true),
-			new Texture(this.gl, 1000, 1000, true),
-			new Texture(this.gl, 1000, 1000, true),
-		];
-		this.positionTexture = [
-			new Texture(this.gl, 1000, 1000, true),
-			new Texture(this.gl, 1000, 1000, true),
-			new Texture(this.gl, 1000, 1000, true),
-		];
-		this.pingPongIdx = 0;
+		window.addEventListener('resize', (event) => {
+			this.initTextures();
+			this.initUBOs();
+		});
 
-		this.renderSSBO = new SSBO(this.gl, 1000 * 1000, 4, 4);
-		this.worldPositionSSBO = new SSBO(this.gl, 1000 * 1000, 4, 4);
+		this.initTextures();
+		this.initUBOs();
 
 		this.pointBuffer = new PointBuffer(this.gl, 10000);
 
@@ -224,6 +217,33 @@ export class ComputePointCloudRenderer {
 		this.glTypeMapping.set(Uint16Array, this.gl.UNSIGNED_SHORT);
 
 		this.toggle = 0;
+	}
+
+	initTextures() {
+		this.renderTexture = [
+			new Texture(this.gl, window.innerWidth, window.innerHeight, true),
+			new Texture(this.gl, window.innerWidth, window.innerHeight, true),
+			new Texture(this.gl, window.innerWidth, window.innerHeight, true),
+		];
+		this.positionTexture = [
+			new Texture(this.gl, window.innerWidth, window.innerHeight, true),
+			new Texture(this.gl, window.innerWidth, window.innerHeight, true),
+			new Texture(this.gl, window.innerWidth, window.innerHeight, true),
+		];
+		this.pingPongIdx = 0;
+	}
+
+	initUBOs() {
+		const gl = this.gl;
+
+		if (!this.resolutionUBO) {
+			this.resolutionUBO = gl.createBuffer();
+		}
+
+		gl.bindBuffer(gl.UNIFORM_BUFFER, this.resolutionUBO);
+		let resolution = new Float32Array([window.innerWidth, window.innerHeight]);
+		gl.bufferData(gl.UNIFORM_BUFFER, resolution, gl.STATIC_READ);
+		gl.bindBuffer(gl.UNIFORM_BUFFER, null);
 	}
 
 	createBuffer(geometry){
@@ -1172,6 +1192,8 @@ export class ComputePointCloudRenderer {
 		camera.updateProjectionMatrix();
 
 		const traversalResult = this.traverse(scene);
+
+		gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, this.resolutionUBO);
 
 		// RENDER
 		this.clearImageBuffer(this.pingPong(true));

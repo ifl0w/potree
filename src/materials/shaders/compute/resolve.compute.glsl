@@ -13,6 +13,11 @@ uniform mat4 lastFrameProjectionMatrix;
 
 uniform int lastIdx;
 
+layout(std140, binding = 0) uniform screenData
+{
+    vec2 resolution;
+};
+
 layout(binding=0, rgba32f) uniform readonly image2D newColorTexture;
 layout(binding=1, rgba32f) uniform readonly image2D newPositionTexture;
 

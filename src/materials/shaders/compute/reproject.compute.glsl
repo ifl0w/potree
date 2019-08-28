@@ -13,6 +13,11 @@ uniform mat4 lastFrameProjectionMatrix;
 
 uniform int lastIdx;
 
+layout(std140, binding = 0) uniform screenData
+{
+    vec2 resolution;
+};
+
 layout(binding=0, rgba32f) uniform writeonly image2D colorTexture;
 layout(binding=1, rgba32f) uniform writeonly image2D positionTexture;
 layout(binding=2, rgba32f) uniform readonly image2D readColorTexture;
@@ -61,7 +66,7 @@ void main() {
     }
 
     // screenspace
-    ivec2 storePos = ivec2((reprojectedNDCPosition.xy * vec2(0.5) + vec2(0.5)) * vec2(1000, 1000));
+    ivec2 storePos = ivec2((reprojectedNDCPosition.xy * vec2(0.5) + vec2(0.5)) * resolution);
 
     imageStore(colorTexture, storePos, newColor);
     imageStore(positionTexture, storePos, lastWorldPos); // world position does not change

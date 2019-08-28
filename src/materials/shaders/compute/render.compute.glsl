@@ -10,6 +10,11 @@ uniform mat4 projectionMatrix;
 
 uniform int lastIdx;
 
+layout(std140, binding = 0) uniform screenData
+{
+    vec2 resolution;
+};
+
 layout(binding=6, rgba32f) uniform writeonly image2D colorTexture;
 layout(binding=7, rgba32f) uniform writeonly image2D positionTexture;
 
@@ -56,7 +61,7 @@ void main() {
     }
 
     // screenspace
-    ivec2 storePos = ivec2((ndcPosition.xy * vec2(0.5) + vec2(0.5)) * vec2(1000, 1000));
+    ivec2 storePos = ivec2((ndcPosition.xy * vec2(0.5) + vec2(0.5)) * resolution);
 
     vec4 pointColor = colors[linearIdx];
 
