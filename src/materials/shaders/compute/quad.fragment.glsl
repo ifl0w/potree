@@ -15,12 +15,12 @@ layout(binding = 0) uniform sampler2D renderTexture;
 
 void main()
 {
-//    ivec2 accesLocation = ivec2(textureCoords * vec2(1000));
-//    if (imageLoad(newPointsTexture, accesLocation) != vec4(0)) {
-//        fragColor = imageLoad(newPointsTexture, accesLocation);
-//        fragColor = vec4(1,0,0,1);
-//        return;
-//    }
+    //    ivec2 accesLocation = ivec2(textureCoords * vec2(1000));
+    //    if (imageLoad(newPointsTexture, accesLocation) != vec4(0)) {
+    //        fragColor = imageLoad(newPointsTexture, accesLocation);
+    //        fragColor = vec4(1,0,0,1);
+    //        return;
+    //    }
 
     fragColor = texture(renderTexture, textureCoords);
 }

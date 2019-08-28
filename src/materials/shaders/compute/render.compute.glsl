@@ -25,7 +25,7 @@ layout(std140, binding=0) buffer ModelMatices
 
 layout(std140, binding=1) buffer PositionBuffer
 {
-    vec4 points[]; // xyz = position, w = modelMatrixIndex
+    vec4 points[];// xyz = position, w = modelMatrixIndex
 };
 
 layout(std140, binding=2) buffer ColorBuffer
@@ -56,7 +56,7 @@ void main() {
     // Clipping
     if (ndcPosition.x > 1.0 || ndcPosition.x < -1.0 ||
     ndcPosition.y > 1.0 || ndcPosition.y < -1.0 ||
-    ndcPosition.z > 1.0 || ndcPosition.z < 0.0 ) {
+    ndcPosition.z > 1.0 || ndcPosition.z < 0.0) {
         return;
     }
 

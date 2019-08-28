@@ -12,10 +12,10 @@ export class PointBuffer {
         this.modelMatrixSSBO = new SSBO(gl, 5000, 16, 4);
 
         // ssbo containing vec4 (xyz = position, w = modelMatrixIndex)
-        this.positionsSSBO = new SSBO(gl, size, 4,4);
+        this.positionsSSBO = new SSBO(gl, size, 4, 4);
 
         // ssbo containing colors as vec4
-        this.colorSSBO = new SSBO(gl, size, 4,4);
+        this.colorSSBO = new SSBO(gl, size, 4, 4);
     }
 
     clear() {

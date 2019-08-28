@@ -31,7 +31,7 @@ layout(std140, binding=0) buffer ModelMatices
 
 layout(std140, binding=1) buffer PositionBuffer
 {
-    vec4 points[]; // xyz = position, w = modelMatrixIndex
+    vec4 points[];// xyz = position, w = modelMatrixIndex
 };
 
 layout(std140, binding=2) buffer ColorBuffer
@@ -61,7 +61,7 @@ void main() {
     // Clipping
     if (reprojectedNDCPosition.x > 1.0 || reprojectedNDCPosition.x < -1.0 ||
     reprojectedNDCPosition.y > 1.0 || reprojectedNDCPosition.y < -1.0 ||
-    reprojectedNDCPosition.z > 1.0 || reprojectedNDCPosition.z < 0.0 ) {
+    reprojectedNDCPosition.z > 1.0 || reprojectedNDCPosition.z < 0.0) {
         return;
     }
 
@@ -69,5 +69,5 @@ void main() {
     ivec2 storePos = ivec2((reprojectedNDCPosition.xy * vec2(0.5) + vec2(0.5)) * resolution);
 
     imageStore(colorTexture, storePos, newColor);
-    imageStore(positionTexture, storePos, lastWorldPos); // world position does not change
+    imageStore(positionTexture, storePos, lastWorldPos);// world position does not change
 }

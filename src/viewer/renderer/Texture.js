@@ -9,7 +9,7 @@ export class Texture {
         this._emptyData = new Float32Array(this.width * this.height * 4);
 
         this.texture = gl.createTexture();
-		gl.bindTexture(gl.TEXTURE_2D, this.texture);
+        gl.bindTexture(gl.TEXTURE_2D, this.texture);
 
         if (immutable) {
             gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA32F, width, height);

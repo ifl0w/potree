@@ -27,11 +27,11 @@ export class Shader {
      * @param type GL shader types
      * @param sourceCode
      */
-    addSourceCode(type, sourceCode){
+    addSourceCode(type, sourceCode) {
         this.shaderCodes.set(type, sourceCode);
     };
 
-    compileShader(shader, source){
+    compileShader(shader, source) {
         let gl = this.gl;
 
         gl.shaderSource(shader, source);
@@ -121,7 +121,7 @@ export class Shader {
         const gl = this.gl;
         const location = this.resolveUniformLocation(name);
 
-        if(location == null){
+        if (location == null) {
             return;
         }
 
@@ -132,7 +132,7 @@ export class Shader {
         const gl = this.gl;
         const location = this.resolveUniformLocation(name);
 
-        if(location == null){
+        if (location == null) {
             return;
         }
 
@@ -143,7 +143,7 @@ export class Shader {
         const gl = this.gl;
         const location = this.resolveUniformLocation(name);
 
-        if(location == null){
+        if (location == null) {
             return;
         }
 
@@ -154,7 +154,7 @@ export class Shader {
         const gl = this.gl;
         const location = this.resolveUniformLocation(name);
 
-        if(location == null){
+        if (location == null) {
             return;
         }
 
@@ -165,7 +165,7 @@ export class Shader {
         const gl = this.gl;
         const location = this.resolveUniformLocation(name);
 
-        if(location == null){
+        if (location == null) {
             return;
         }
 
@@ -200,12 +200,11 @@ export class Shader {
         let gl = this.gl;
         const location = this.resolveUniformLocation(name);
 
-        if(location == null){
+        if (location == null) {
             return;
         }
 
         gl.uniform1i(location, value);
     }
 
-};
-
+}
