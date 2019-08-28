@@ -20,11 +20,12 @@ export class SSBO {
     }
 
     clear() {
-        const gl = this.gl;
+        // buffer does not really need to be cleared. It is sufficient to reset the _currentByteOffset
+        /*const gl = this.gl;
 
         gl.bindBuffer(gl.SHADER_STORAGE_BUFFER, this.ssbo);
         gl.bufferSubData(gl.SHADER_STORAGE_BUFFER, 0, this._emptyData, 0);
-        gl.bindBuffer(gl.SHADER_STORAGE_BUFFER, null);
+        gl.bindBuffer(gl.SHADER_STORAGE_BUFFER, null);*/
 
         // reset internal offset
         this._currentByteOffset = 0;

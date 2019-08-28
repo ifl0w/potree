@@ -179,7 +179,7 @@ export class ComputePointCloudRenderer {
 		this.initTextures();
 		this.initUBOs();
 
-		this.pointBuffer = new PointBuffer(this.gl, 10000);
+		this.pointBuffer = new PointBuffer(this.gl, 25000);
 
 		this.pointCloudShader = new Shader(this.gl, "PointCloudComputeShader");
 		this.pointCloudShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['render.compute.glsl']);
