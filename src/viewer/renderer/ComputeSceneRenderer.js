@@ -67,7 +67,7 @@ export class ComputeSceneRenderer {
 		});
 
 		// render scene
-		/*renderer.render(viewer.scene.scene, camera);
+		renderer.render(viewer.scene.scene, camera);
 
 		viewer.dispatchEvent({type: "render.pass.scene",viewer: viewer});
 
@@ -99,7 +99,7 @@ export class ComputeSceneRenderer {
 		// 							renderer.domElement.clientHeight - viewer.navigationCube.width,
 		// 							viewer.navigationCube.width, viewer.navigationCube.width);
 		// renderer.render(viewer.navigationCube, viewer.navigationCube.camera);
-		// renderer.setViewport(0, 0, renderer.domElement.clientWidth, renderer.domElement.clientHeight);*/
+		// renderer.setViewport(0, 0, renderer.domElement.clientWidth, renderer.domElement.clientHeight);
 
 		viewer.dispatchEvent({type: "render.pass.end",viewer: viewer});
 	}
