@@ -74,6 +74,7 @@ let shaders = [
 	"src/materials/shaders/compute/render.compute.glsl",
 	"src/materials/shaders/compute/reproject.compute.glsl",
 	"src/materials/shaders/compute/resolve.compute.glsl",
+	"src/materials/shaders/compute/clear.compute.glsl",
 	"src/materials/shaders/compute/quad.vertex.glsl",
 	"src/materials/shaders/compute/quad.fragment.glsl"
 ];

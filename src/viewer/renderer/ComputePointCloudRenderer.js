@@ -200,6 +200,10 @@ export class ComputePointCloudRenderer {
 		this.resolveShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['resolve.compute.glsl']);
 		this.resolveShader.linkProgram();
 
+		this.clearShader = new Shader(this.gl, "ClearComputeShader");
+		this.clearShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['clear.compute.glsl']);
+		this.clearShader.linkProgram();
+
 		this.drawQuadShader = new Shader(this.gl, "DrawQuadShader");
 		this.drawQuadShader.addSourceCode(this.gl.VERTEX_SHADER, Shaders['quad.vertex.glsl']);
 		this.drawQuadShader.addSourceCode(this.gl.FRAGMENT_SHADER, Shaders['quad.fragment.glsl']);
@@ -1278,8 +1282,20 @@ export class ComputePointCloudRenderer {
 	}
 
 	clearImageBuffer(idx) {
-		this.renderTexture[idx].clear();
-		this.positionTexture[idx].clear();
+		/*
+            Textures can not efficiently be cleared unless they are bound to a FBO.
+            A sufficiently fast way without CPU-GPU overhead and without FBO is to utilize compute shaders for resetting
+            the textures.
+         */
+		this.clearShader.use();
+
+		this.gl.bindImageTexture(0, this.renderTexture[idx].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
+		this.gl.bindImageTexture(1, this.positionTexture[idx].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
+
+		this.gl.dispatchCompute(
+			Math.ceil(this.renderTexture[idx].width / 16),
+			Math.ceil(this.renderTexture[idx].height / 16),
+			1);
 	}
 
 	swapImageBuffer() {
