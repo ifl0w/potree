@@ -72,6 +72,8 @@ let shaders = [
 
 	// WebGL 2.0 Compute Demo
 	"src/materials/shaders/compute/render.compute.glsl",
+	"src/materials/shaders/compute/reproject.compute.glsl",
+	"src/materials/shaders/compute/resolve.compute.glsl",
 	"src/materials/shaders/compute/quad.vertex.glsl",
 	"src/materials/shaders/compute/quad.fragment.glsl"
 ];

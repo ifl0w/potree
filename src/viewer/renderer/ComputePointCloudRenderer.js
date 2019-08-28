@@ -174,8 +174,10 @@ export class ComputePointCloudRenderer {
 		this.renderTexture = [
 			new Texture(this.gl, 1000, 1000, true),
 			new Texture(this.gl, 1000, 1000, true),
+			new Texture(this.gl, 1000, 1000, true),
 		];
 		this.positionTexture = [
+			new Texture(this.gl, 1000, 1000, true),
 			new Texture(this.gl, 1000, 1000, true),
 			new Texture(this.gl, 1000, 1000, true),
 		];
@@ -184,11 +186,19 @@ export class ComputePointCloudRenderer {
 		this.renderSSBO = new SSBO(this.gl, 1000 * 1000, 4, 4);
 		this.worldPositionSSBO = new SSBO(this.gl, 1000 * 1000, 4, 4);
 
-		this.pointBuffer = new PointBuffer(this.gl, 20000);
+		this.pointBuffer = new PointBuffer(this.gl, 10000);
 
 		this.pointCloudShader = new Shader(this.gl, "PointCloudComputeShader");
 		this.pointCloudShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['render.compute.glsl']);
 		this.pointCloudShader.linkProgram();
+
+		this.reprojectShader = new Shader(this.gl, "ReprojectComputeShader");
+		this.reprojectShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['reproject.compute.glsl']);
+		this.reprojectShader.linkProgram();
+
+		this.resolveShader = new Shader(this.gl, "ResolveComputeShader");
+		this.resolveShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['resolve.compute.glsl']);
+		this.resolveShader.linkProgram();
 
 		this.drawQuadShader = new Shader(this.gl, "DrawQuadShader");
 		this.drawQuadShader.addSourceCode(this.gl.VERTEX_SHADER, Shaders['quad.vertex.glsl']);
@@ -1160,63 +1170,105 @@ export class ComputePointCloudRenderer {
 		const traversalResult = this.traverse(scene);
 
 		// RENDER
-		this.clearImageBuffer();
+		this.clearImageBuffer(this.pingPong(true));
+		this.clearImageBuffer(2);
+
+		this.reprojectLastFrame(camera);
+
+		this.clearImageBuffer(this.pingPong(false));
+		this.swapImageBuffer();
 
 		for (const octree of traversalResult.octrees) {
 			let nodes = octree.visibleNodes;
 			this.renderOctree(octree, nodes, camera, target, params);
 		}
 
-		this.reprojectAndRenderPoints(camera);
+		this.renderPoints(camera);
 		this.pointBuffer.clear();
 
-		this.resolveBuffer();
+		this.resolveBuffer(camera);
+
+		this.displayResult();
+		this.swapImageBuffer();
 
 		// CLEANUP
-		gl.activeTexture(gl.TEXTURE1);
-		gl.bindTexture(gl.TEXTURE_2D, null);
+		// gl.activeTexture(gl.TEXTURE1);
+		// gl.bindTexture(gl.TEXTURE_2D, null);
 
 		this.threeRenderer.state.reset();
 	}
 
-	reprojectAndRenderPoints(camera) {
-		// render points to texture
-		this.pointCloudShader.use();
+	reprojectLastFrame(camera) {
+		this.reprojectShader.use();
 
-		this.pointCloudShader.setUniform1i("lastIdx", this.pointBuffer.positionsSSBO.lastIdx());
-		this.pointCloudShader.setUniformMatrix4("viewMatrix", camera.matrixWorldInverse);
-		this.pointCloudShader.setUniformMatrix4("projectionMatrix", camera.projectionMatrix);
-		this.pointCloudShader.setUniformMatrix4("lastFrameViewMatrix", this.lastFrameViewMatrix);
-		this.pointCloudShader.setUniformMatrix4("lastFrameProjectionMatrix", this.lastFrameProjectionMatrix);
-
-		this.pointBuffer.modelMatrixSSBO.bind(0);
-		this.pointBuffer.positionsSSBO.bind(1);
-		this.pointBuffer.colorSSBO.bind(2);
+		this.reprojectShader.setUniformMatrix4("viewMatrix", camera.matrixWorldInverse);
+		this.reprojectShader.setUniformMatrix4("projectionMatrix", camera.projectionMatrix);
+		// this.reprojectShader.setUniformMatrix4("lastFrameViewMatrix", this.lastFrameViewMatrix);
+		// this.reprojectShader.setUniformMatrix4("lastFrameProjectionMatrix", this.lastFrameProjectionMatrix);
 
 		this.gl.bindImageTexture(0, this.renderTexture[this.pingPong(true)].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
 		this.gl.bindImageTexture(1, this.positionTexture[this.pingPong(true)].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
 		this.gl.bindImageTexture(2, this.renderTexture[this.pingPong(false)].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
 		this.gl.bindImageTexture(3, this.positionTexture[this.pingPong(false)].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
 
-		// maximum of
-		let maxOps = Math.max(this.renderTexture[this.pingPong(false)].width,
-			this.renderTexture[this.pingPong(false)].height,
-			this.pointBuffer.size);
-
 		this.gl.dispatchCompute(
-			Math.ceil(maxOps/16),
-			Math.ceil(maxOps/16),
+			Math.ceil(this.renderTexture[this.pingPong(false)].width / 16),
+			Math.ceil(this.renderTexture[this.pingPong(false)].height / 16),
 			1);
+	}
+
+	renderPoints(camera) {
+		// render points to texture
+		this.pointCloudShader.use();
+
+		this.pointCloudShader.setUniform1i("lastIdx", this.pointBuffer.positionsSSBO.lastIdx());
+		this.pointCloudShader.setUniformMatrix4("viewMatrix", camera.matrixWorldInverse);
+		this.pointCloudShader.setUniformMatrix4("projectionMatrix", camera.projectionMatrix);
+
+		this.pointBuffer.modelMatrixSSBO.bind(0);
+		this.pointBuffer.positionsSSBO.bind(1);
+		this.pointBuffer.colorSSBO.bind(2);
+
+		this.gl.bindImageTexture(6, this.renderTexture[2].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
+		this.gl.bindImageTexture(7, this.positionTexture[2].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
+
+		this.gl.dispatchCompute(Math.ceil(this.pointBuffer.size / 16), Math.ceil(this.pointBuffer.size / 16), 1);
 
 		this.lastFrameViewMatrix = camera.matrixWorldInverse;
 		this.lastFrameProjectionMatrix = camera.projectionMatrix;
 	}
 
-	resolveBuffer() {
+	resolveBuffer(camera) {
+		this.resolveShader.use();
+
+		this.resolveShader.setUniformMatrix4("viewMatrix", camera.matrixWorldInverse);
+		this.resolveShader.setUniformMatrix4("projectionMatrix", camera.projectionMatrix);
+
+		this.gl.bindImageTexture(0, this.renderTexture[2].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
+		this.gl.bindImageTexture(1, this.positionTexture[2].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
+
+		this.gl.bindImageTexture(2, this.renderTexture[this.pingPong(false)].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
+		this.gl.bindImageTexture(3, this.positionTexture[this.pingPong(false)].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
+
+		this.gl.bindImageTexture(4, this.renderTexture[this.pingPong(true)].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
+		this.gl.bindImageTexture(5, this.positionTexture[this.pingPong(true)].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
+
+		this.gl.dispatchCompute(
+			Math.ceil(this.renderTexture[this.pingPong(false)].width / 16),
+			Math.ceil(this.renderTexture[this.pingPong(false)].height / 16),
+			1);
+	}
+
+	displayResult() {
 		this.gl.disable(this.gl.DEPTH_TEST);
+		// this.gl.enable(this.gl.BLEND);
 
 		// Draw full screen quad
 		this.drawQuadShader.use();
+
+		// this.gl.bindImageTexture(0, this.renderTexture[1].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
+		// this.gl.bindImageTexture(1, this.positionTexture[this.pingPong(true)].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
+
 		this.renderTexture[this.pingPong(true)].bind(0);
 		this.drawQuadShader.setUniformTexture('renderTexture', this.renderTexture[this.pingPong(true)].texture);
 
@@ -1225,9 +1277,12 @@ export class ComputePointCloudRenderer {
 		this.gl.bindVertexArray(null);
 	}
 
-	clearImageBuffer() {
-		this.renderTexture[this.pingPong(false)].clear();
-		this.positionTexture[this.pingPong(false)].clear();
+	clearImageBuffer(idx) {
+		this.renderTexture[idx].clear();
+		this.positionTexture[idx].clear();
+	}
+
+	swapImageBuffer() {
 		this.pingPongIdx = this.pingPongIdx === 0 ? 1 : 0; // swap textures
 	}
 
