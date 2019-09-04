@@ -5,13 +5,13 @@ export class SSBO {
         this._maxElementCount = maxElementCount;
         this._elementSize = elementSize;
         this._bytesPerComponent = bytesPerComponent;
-        this._emptyData = new Float32Array(this.arrayLength());
+        // this._emptyData = new Float32Array(this.arrayLength());
         this._currentByteOffset = 0;
 
         this.ssbo = gl.createBuffer();
 
         gl.bindBuffer(gl.SHADER_STORAGE_BUFFER, this.ssbo);
-        gl.bufferData(gl.SHADER_STORAGE_BUFFER, this._emptyData, gl.DYNAMIC_DRAW);
+        gl.bufferData(gl.SHADER_STORAGE_BUFFER, this.byteSize(), gl.DYNAMIC_DRAW);
         gl.bindBuffer(gl.SHADER_STORAGE_BUFFER, null);
     }
 
@@ -46,7 +46,7 @@ export class SSBO {
      *
      * @param data Float32Array
      */
-    appendData(data) {
+    async appendData(data) {
         if (this._currentByteOffset + data.length * this._bytesPerComponent > this.byteSize()) {
             return;
         }

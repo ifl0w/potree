@@ -33,7 +33,7 @@ layout(std140, binding=2) buffer ColorBuffer
     vec4 colors[];
 };
 
-layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 
 void main() {
     mat4 viewProjectionMatrix = projectionMatrix * viewMatrix;

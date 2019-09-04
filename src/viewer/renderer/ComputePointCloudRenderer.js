@@ -22,7 +22,7 @@ export class ComputePointCloudRenderer {
         this.initTextures();
         this.initUBOs();
 
-        this.pointBuffer = new PointBuffer(this.gl, 25000);
+        this.pointBuffer = new PointBuffer(this.gl, 100000);
 
         this.pointCloudShader = new Shader(this.gl, "PointCloudComputeShader");
         this.pointCloudShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['render.compute.glsl']);
@@ -112,18 +112,19 @@ export class ComputePointCloudRenderer {
         let view = camera.matrixWorldInverse;
         let worldView = new THREE.Matrix4();
 
+        const maxNodes = nodes.length;
+
         let numTotalPoints = nodes.map(n => n.getNumPoints()).reduce((a, b) => a + b, 0);
-        let numPointsPerNode = Math.floor(this.pointBuffer.size / nodes.length);
+        let numPointsPerNode = Math.floor(this.pointBuffer.size / maxNodes);
+        // console.log(numTotalPoints);
+        // console.log(nodes);
 
         let i = 0;
         for (let node of nodes) {
 
+            if (i > maxNodes) continue;
+
             let world = node.sceneNode.matrixWorld;
-            worldView.multiplyMatrices(view, world);
-
-            shader.setUniformMatrix4("modelMatrix", world);
-            shader.setUniformMatrix4("modelViewMatrix", worldView);
-
             let geometry = node.geometryNode.geometry;
 
             this.pointBuffer.addGeometry(new Float32Array(world.elements), geometry, numPointsPerNode);
@@ -233,7 +234,7 @@ export class ComputePointCloudRenderer {
         this.gl.bindImageTexture(6, this.renderTexture[2].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
         this.gl.bindImageTexture(7, this.positionTexture[2].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
 
-        this.gl.dispatchCompute(Math.ceil(this.pointBuffer.size / 16), Math.ceil(this.pointBuffer.size / 16), 1);
+        this.gl.dispatchCompute(Math.ceil(this.pointBuffer.size / 256), 1, 1);
 
         this.lastFrameViewMatrix = camera.matrixWorldInverse;
         this.lastFrameProjectionMatrix = camera.projectionMatrix;
