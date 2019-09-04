@@ -61,7 +61,8 @@ export class SSBO {
     }
 
     lastIdx() {
-        return this._currentByteOffset / (this._elementSize * this._bytesPerComponent) - 1;
+        const idx = this._currentByteOffset / (this._elementSize * this._bytesPerComponent) - 1;
+        return Math.max(idx, 0);
     }
 
     byteSize() {

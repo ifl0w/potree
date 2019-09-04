@@ -9,6 +9,8 @@ uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 
 uniform int lastIdx;
+uniform int startIdx;
+uniform int renderAmount;
 
 layout(std140, binding = 0) uniform screenData
 {
@@ -39,6 +41,7 @@ void main() {
     mat4 viewProjectionMatrix = projectionMatrix * viewMatrix;
 
     uint linearIdx = gl_GlobalInvocationID.x * gl_GlobalInvocationID.y + gl_GlobalInvocationID.x;
+    linearIdx += uint(startIdx);
 
     if (linearIdx >= uint(lastIdx)) {
         return;

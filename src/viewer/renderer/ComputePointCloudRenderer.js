@@ -22,7 +22,7 @@ export class ComputePointCloudRenderer {
         this.initTextures();
         this.initUBOs();
 
-        this.pointBuffer = new PointBuffer(this.gl, 100000);
+        this.pointBuffer = new PointBuffer(this.gl, 10 * 1000 * 1000);
 
         this.pointCloudShader = new Shader(this.gl, "PointCloudComputeShader");
         this.pointCloudShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['render.compute.glsl']);
@@ -51,6 +51,7 @@ export class ComputePointCloudRenderer {
         this.lastFrameProjectionMatrix = new Float32Array(16);
 
         this.toggle = 0;
+        this.startIdx = 0;
     }
 
     initTextures() {
@@ -112,7 +113,8 @@ export class ComputePointCloudRenderer {
         let view = camera.matrixWorldInverse;
         let worldView = new THREE.Matrix4();
 
-        const maxNodes = nodes.length;
+        const maxNodes = 10;
+        let pointsToAdd = 100 * 1000;
 
         let numTotalPoints = nodes.map(n => n.getNumPoints()).reduce((a, b) => a + b, 0);
         let numPointsPerNode = Math.floor(this.pointBuffer.size / maxNodes);
@@ -122,13 +124,19 @@ export class ComputePointCloudRenderer {
         let i = 0;
         for (let node of nodes) {
 
-            if (i > maxNodes) continue;
+            // if (i > maxNodes) continue;
 
-            let world = node.sceneNode.matrixWorld;
-            let geometry = node.geometryNode.geometry;
+            // let render = Math.random() * nodes.length < maxNodes;
+            // if (!render) continue;
+            // if (this.nodesUploaded.hasOwnProperty(nodeId) || pointsToAdd - node.getNumPoints() < 0) continue;
 
-            this.pointBuffer.addGeometry(new Float32Array(world.elements), geometry, numPointsPerNode);
+            // let world = node.sceneNode.matrixWorld;
+            // let geometry = node.geometryNode.geometry;
 
+            this.pointBuffer.loadNode(node);
+
+            // pointsToAdd -= node.getNumPoints();
+            // window.pointsToAdd = Math.min(window.pointsToAdd ? window.pointsToAdd : pointsToAdd, pointsToAdd);
             i++;
         }
 
@@ -223,7 +231,11 @@ export class ComputePointCloudRenderer {
         // render points to texture
         this.pointCloudShader.use();
 
+        const renderAmount = 1000000;
+
         this.pointCloudShader.setUniform1i("lastIdx", this.pointBuffer.positionsSSBO.lastIdx());
+        this.pointCloudShader.setUniform1i("startIdx", this.startIdx);
+        this.pointCloudShader.setUniform1i("renderAmount", renderAmount);
         this.pointCloudShader.setUniformMatrix4("viewMatrix", camera.matrixWorldInverse);
         this.pointCloudShader.setUniformMatrix4("projectionMatrix", camera.projectionMatrix);
 
@@ -234,10 +246,15 @@ export class ComputePointCloudRenderer {
         this.gl.bindImageTexture(6, this.renderTexture[2].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
         this.gl.bindImageTexture(7, this.positionTexture[2].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
 
-        this.gl.dispatchCompute(Math.ceil(this.pointBuffer.size / 256), 1, 1);
+        this.gl.dispatchCompute(Math.ceil(renderAmount / 256), 1, 1);
 
         this.lastFrameViewMatrix = camera.matrixWorldInverse;
         this.lastFrameProjectionMatrix = camera.projectionMatrix;
+
+        this.startIdx += renderAmount;
+        if (this.startIdx >= this.pointBuffer.positionsSSBO.lastIdx()) {
+            this.startIdx = 0;
+        }
     }
 
     resolveBuffer(camera) {
