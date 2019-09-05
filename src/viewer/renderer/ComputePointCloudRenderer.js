@@ -113,21 +113,20 @@ export class ComputePointCloudRenderer {
         let view = camera.matrixWorldInverse;
         let worldView = new THREE.Matrix4();
 
-        const maxNodes = 10;
+        const maxNodes = 100;
         let pointsToAdd = 100 * 1000;
 
         let numTotalPoints = nodes.map(n => n.getNumPoints()).reduce((a, b) => a + b, 0);
         let numPointsPerNode = Math.floor(this.pointBuffer.size / maxNodes);
         // console.log(numTotalPoints);
         // console.log(nodes);
-
         let i = 0;
         for (let node of nodes) {
 
             // if (i > maxNodes) continue;
 
-            // let render = Math.random() * nodes.length < maxNodes;
-            // if (!render) continue;
+            let render = Math.random() * nodes.length < maxNodes;
+            if (!render) continue;
             // if (this.nodesUploaded.hasOwnProperty(nodeId) || pointsToAdd - node.getNumPoints() < 0) continue;
 
             // let world = node.sceneNode.matrixWorld;
@@ -231,9 +230,9 @@ export class ComputePointCloudRenderer {
         // render points to texture
         this.pointCloudShader.use();
 
-        const renderAmount = 1000000;
+        const renderAmount =  0.5 * 1000 * 1000;
 
-        this.pointCloudShader.setUniform1i("lastIdx", this.pointBuffer.positionsSSBO.lastIdx());
+        this.pointCloudShader.setUniform1i("lastIdx", this.pointBuffer.size);
         this.pointCloudShader.setUniform1i("startIdx", this.startIdx);
         this.pointCloudShader.setUniform1i("renderAmount", renderAmount);
         this.pointCloudShader.setUniformMatrix4("viewMatrix", camera.matrixWorldInverse);
@@ -252,7 +251,7 @@ export class ComputePointCloudRenderer {
         this.lastFrameProjectionMatrix = camera.projectionMatrix;
 
         this.startIdx += renderAmount;
-        if (this.startIdx >= this.pointBuffer.positionsSSBO.lastIdx()) {
+        if (this.startIdx >= this.pointBuffer.size) {
             this.startIdx = 0;
         }
     }

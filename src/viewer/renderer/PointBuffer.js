@@ -1,14 +1,21 @@
 import {SSBO} from "./SSBO";
+import {Shader} from "./Shader";
+import {Shaders} from "../../../build/shaders/shaders";
 
 export class PointBuffer {
-    constructor(context, size) {
+    constructor(context, size, streamSize = 100000) {
         this.gl = context;
         const gl = context;
         this.size = size;
-        // this._gpuMemoryPoolSize = 128 * 1000 * 1000; // 128M is guaranteed for ssbo in opengl
         this._currentByteOffset = 0;
 
-        // this.gpuMemoryPool = new SSBO(gl, this._gpuMemoryPoolSize, 1, 1);
+        this._gpuMemoryPoolSize = size;
+        this._streamSize = streamSize;
+
+        this.denseIdxSSBO = new SSBO(gl, this._gpuMemoryPoolSize, 1, 16); // 16 bytes because of packing (can be optimized)
+        this.freeDenseIdx = 0;
+        this.streamPositionsSSBO = new SSBO(gl, streamSize, 4, 4);
+        this.streamColorSSBO = new SSBO(gl, streamSize, 4, 4);
 
         // hard limit of 5000 nodes
         this.modelMatrixSSBO = new SSBO(gl, 5000, 16, 4);
@@ -31,7 +38,25 @@ export class PointBuffer {
                 }
             }
         */
-        this.nodesUploaded = {}
+        this.nodesUploaded = {};
+
+        this.distributeShader = new Shader(this.gl, "DistributeComputeShader");
+        this.distributeShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['distribute.compute.glsl']);
+        this.distributeShader.linkProgram();
+
+        this.insertShader = new Shader(this.gl, "InsertComputeShader");
+        this.insertShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['insert.compute.glsl']);
+        this.insertShader.linkProgram();
+
+        this.initDenseIdxSSBO();
+    }
+
+    initDenseIdxSSBO() {
+        this.distributeShader.use();
+
+        this.denseIdxSSBO.bind(0);
+
+        this.gl.dispatchCompute(Math.ceil(this._gpuMemoryPoolSize / 256), 1, 1);
     }
 
     clear() {
@@ -45,14 +70,18 @@ export class PointBuffer {
         const numPoints =  node.getNumPoints();
 
         if (this.nodesUploaded.hasOwnProperty(nodeId)
-            || this.positionsSSBO.spaceLeft() - numPoints < 0) {
+            || this.freeDenseIdx + numPoints > this._gpuMemoryPoolSize) {
             return;
         }
 
         let world = node.sceneNode.matrixWorld;
         let geometry = node.geometryNode.geometry;
 
-        this.addGeometry(new Float32Array(world.elements), geometry, 0);
+        this.addGeometry(new Float32Array(world.elements), geometry, numPoints);
+        this.insertIntoGPUPool(numPoints);
+
+        this.streamPositionsSSBO.clear();
+        this.streamColorSSBO.clear();
 
         this.nodesUploaded[node.geometryNode.id] = {
             'start': this.positionsSSBO.lastIdx(),
@@ -64,7 +93,7 @@ export class PointBuffer {
 
         this.modelMatrixSSBO.appendData(modelMatrix);
 
-        const numArrayElements = geometry.attributes.position.count * 4; //Math.min(numberOfPoints * 4, this.positionsSSBO.spaceLeft() * 4);
+        const numArrayElements = Math.min(numberOfPoints * 4, this.streamPositionsSSBO.spaceLeft() * 4);
 
         const positions = new Float32Array(numArrayElements);
         const colors = new Float32Array(numArrayElements);
@@ -85,7 +114,30 @@ export class PointBuffer {
             colors[i + 3] = geometry.attributes.color.array[rndColorIdx + 3] / 255;
         }
 
-        this.positionsSSBO.appendData(positions);
-        this.colorSSBO.appendData(colors);
+        this.streamPositionsSSBO.appendData(positions);
+        this.streamColorSSBO.appendData(colors);
+        this.pointsum = (this.pointsum ? this.pointsum : 0) + geometry.attributes.position.count;
+    }
+
+    insertIntoGPUPool(numPoints) {
+        this.insertShader.use();
+
+        this.insertShader.setUniform1i("denseStartIdx", this.freeDenseIdx);
+        this.insertShader.setUniform1i("lastIdx", this.streamPositionsSSBO.lastIdx());
+
+        this.modelMatrixSSBO.bind(0);
+        this.positionsSSBO.bind(1);
+        this.colorSSBO.bind(2);
+        this.streamPositionsSSBO.bind(3);
+        this.streamColorSSBO.bind(4);
+        this.denseIdxSSBO.bind(5);
+
+        // this.gl.memoryBarrier(this.gl.SHADER_STORAGE_BARRIER_BIT);
+        this.gl.dispatchCompute(Math.ceil(this._streamSize / 256), 1, 1);
+        // this.gl.memoryBarrier(this.gl.SHADER_STORAGE_BARRIER_BIT);
+
+
+        this.freeDenseIdx += numPoints;
+        // console.log(numPoints, this.pointsum, this.freeDenseIdx)
     }
 }

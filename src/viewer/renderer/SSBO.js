@@ -46,7 +46,7 @@ export class SSBO {
      *
      * @param data Float32Array
      */
-    async appendData(data) {
+    appendData(data) {
         if (this._currentByteOffset + data.length * this._bytesPerComponent > this.byteSize()) {
             return;
         }
