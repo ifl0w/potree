@@ -113,7 +113,7 @@ export class ComputePointCloudRenderer {
         let view = camera.matrixWorldInverse;
         let worldView = new THREE.Matrix4();
 
-        const maxNodes = 100;
+        const maxNodes = 50;
         let pointsToAdd = 100 * 1000;
 
         let numTotalPoints = nodes.map(n => n.getNumPoints()).reduce((a, b) => a + b, 0);
@@ -125,8 +125,8 @@ export class ComputePointCloudRenderer {
 
             // if (i > maxNodes) continue;
 
-            let render = Math.random() * nodes.length < maxNodes;
-            if (!render) continue;
+            // let render = Math.random() * nodes.length < maxNodes;
+            // if (!render) continue;
             // if (this.nodesUploaded.hasOwnProperty(nodeId) || pointsToAdd - node.getNumPoints() < 0) continue;
 
             // let world = node.sceneNode.matrixWorld;
@@ -138,6 +138,7 @@ export class ComputePointCloudRenderer {
             // window.pointsToAdd = Math.min(window.pointsToAdd ? window.pointsToAdd : pointsToAdd, pointsToAdd);
             i++;
         }
+        // console.log(this.pointBuffer.nodesUploaded.size, nodes.length);
 
         if (exports.measureTimings) {
             performance.mark("renderNodes-end");

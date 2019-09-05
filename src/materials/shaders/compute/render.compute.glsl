@@ -49,8 +49,8 @@ void main() {
 
     vec4 pointData = points[linearIdx];
 
-    mat4 mMatrix = modelMatrices[int(pointData.w)];
-    vec4 worldPosition = mMatrix * vec4(pointData.xyz, 1);
+//    mat4 mMatrix = modelMatrices[int(pointData.w)];
+    vec4 worldPosition = vec4(pointData.xyz, 1);
     vec4 projectedPosition = viewProjectionMatrix * worldPosition;
 
     // Perspective Divide
