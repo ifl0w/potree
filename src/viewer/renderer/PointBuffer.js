@@ -16,7 +16,7 @@ export class PointBuffer {
         this.memoryManager = new MemoryManager(size);
 
         this.denseIdxSSBO = new SSBO(gl, this._gpuMemoryPoolSize, 1, 16); // 16 bytes because of packing (can be optimized)
-        this.streamPositionsSSBO = new SSBO(gl, streamSize, 4, 4);
+        this.streamPositionsSSBO = new SSBO(gl, streamSize, 3, 4);
         this.streamColorSSBO = new SSBO(gl, streamSize, 4, 4);
 
         // hard limit of 5000 nodes
@@ -30,7 +30,6 @@ export class PointBuffer {
 
         let poolSize = this.positionsSSBO.byteSize()
             + this.colorSSBO.byteSize()
-            + this.modelMatrixSSBO.byteSize()
             + this.streamPositionsSSBO.byteSize()
             + this.streamColorSSBO.byteSize()
             + this.denseIdxSSBO.byteSize();
@@ -121,51 +120,23 @@ export class PointBuffer {
     }
 
     addGeometry(modelMatrix, geometry, numberOfPoints) {
-
-        this.modelMatrixSSBO.appendData(modelMatrix);
-
-        const numArrayElements = Math.min(numberOfPoints * 4, this.streamPositionsSSBO.spaceLeft() * 4);
-
-        const positions = new Float32Array(numArrayElements);
-        const colors = new Float32Array(numArrayElements);
-
-        for (let i = 0; i < numArrayElements; i += 4) {
-            const rnd = Math.random();
-            const rndPositionIdx = (i / 4) * 3;
-            const rndColorIdx = i;
-
-            positions[i] = geometry.attributes.position.array[rndPositionIdx];
-            positions[i + 1] = geometry.attributes.position.array[rndPositionIdx + 1];
-            positions[i + 2] = geometry.attributes.position.array[rndPositionIdx + 2];
-            positions[i + 3] = this.modelMatrixSSBO.lastIdx();
-
-            colors[i] = geometry.attributes.color.array[rndColorIdx] / 255;
-            colors[i + 1] = geometry.attributes.color.array[rndColorIdx + 1] / 255;
-            colors[i + 2] = geometry.attributes.color.array[rndColorIdx + 2] / 255;
-            colors[i + 3] = geometry.attributes.color.array[rndColorIdx + 3] / 255;
-        }
-
-        this.streamPositionsSSBO.appendData(positions);
-        this.streamColorSSBO.appendData(colors);
-        this.pointsum = (this.pointsum ? this.pointsum : 0) + geometry.attributes.position.count;
+        this.streamPositionsSSBO.appendData(geometry.attributes.position.array);
+        this.streamColorSSBO.appendData(geometry.attributes.color.array);
     }
 
     insertIntoGPUPool(numPoints, memoryAddress, modelMatrix) {
         this.insertShader.use();
 
         this.insertShader.setUniform1i("denseStartIdx", memoryAddress);
-        this.insertShader.setUniform1i("lastIdx", this.streamPositionsSSBO.lastIdx());
+        this.insertShader.setUniform1i("lastIdx", numPoints - 1);
         this.insertShader.setUniformMatrix4("modelMatrix", modelMatrix);
 
-        this.modelMatrixSSBO.bind(0);
         this.positionsSSBO.bind(1);
         this.colorSSBO.bind(2);
         this.streamPositionsSSBO.bind(3);
         this.streamColorSSBO.bind(4);
         this.denseIdxSSBO.bind(5);
 
-        // this.gl.memoryBarrier(this.gl.SHADER_STORAGE_BARRIER_BIT);
         this.gl.dispatchCompute(Math.ceil(this._streamSize / 256), 1, 1);
-        // this.gl.memoryBarrier(this.gl.SHADER_STORAGE_BARRIER_BIT);
     }
 }

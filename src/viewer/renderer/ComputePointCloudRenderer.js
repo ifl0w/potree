@@ -110,7 +110,7 @@ export class ComputePointCloudRenderer {
     renderNodes(octree, nodes, visibilityTextureData, camera, target, shader, params) {
         if (exports.measureTimings) performance.mark("renderNodes-start");
 
-        const maxNodes = 10;
+        const maxNodes = nodes.length;
 
         let numTotalPoints = nodes.map(n => n.getNumPoints()).reduce((a, b) => a + b, 0);
         let numPointsPerNode = Math.floor(this.pointBuffer.size / maxNodes);
@@ -138,19 +138,19 @@ export class ComputePointCloudRenderer {
     }
 
     renderOctree(octree, nodes, camera, target, params = {}) {
-        let view = camera.matrixWorldInverse;
-        let viewInv = camera.matrixWorld;
-        let proj = camera.projectionMatrix;
-        let projInv = new THREE.Matrix4().getInverse(proj);
+        // let view = camera.matrixWorldInverse;
+        // let viewInv = camera.matrixWorld;
+        // let proj = camera.projectionMatrix;
+        // let projInv = new THREE.Matrix4().getInverse(proj);
 
         let visibilityTextureData = null;
 
         this.pointCloudShader.use();
 
-        this.pointCloudShader.setUniformMatrix4("projectionMatrix", proj);
-        this.pointCloudShader.setUniformMatrix4("viewMatrix", view);
-        this.pointCloudShader.setUniformMatrix4("uViewInv", viewInv);
-        this.pointCloudShader.setUniformMatrix4("uProjInv", projInv);
+        // this.pointCloudShader.setUniformMatrix4("projectionMatrix", proj);
+        // this.pointCloudShader.setUniformMatrix4("viewMatrix", view);
+        // this.pointCloudShader.setUniformMatrix4("uViewInv", viewInv);
+        // this.pointCloudShader.setUniformMatrix4("uProjInv", projInv);
 
         this.renderNodes(octree, nodes, visibilityTextureData, camera, target, this.pointCloudShader, params);
     }
@@ -230,7 +230,7 @@ export class ComputePointCloudRenderer {
         this.pointCloudShader.setUniformMatrix4("viewMatrix", camera.matrixWorldInverse);
         this.pointCloudShader.setUniformMatrix4("projectionMatrix", camera.projectionMatrix);
 
-        this.pointBuffer.modelMatrixSSBO.bind(0);
+        // this.pointBuffer.modelMatrixSSBO.bind(0);
         this.pointBuffer.positionsSSBO.bind(1);
         this.pointBuffer.colorSSBO.bind(2);
 
