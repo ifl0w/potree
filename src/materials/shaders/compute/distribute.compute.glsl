@@ -35,6 +35,6 @@ void main() {
     }
 
     //    uint prime = uint(4294967291); // 2^32 - 5 (https://primes.utm.edu/lists/2small/0bit.html)
-    uint prime = uint(9999991); // prime < 10M && (prime - 3) mod 4 = 0
+    uint prime = uint(24999983); // prime < 25M && (prime - 3) mod 4 = 0
     indices[linearIdx] = prnPermute(linearIdx, prime);
 }

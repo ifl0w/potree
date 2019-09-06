@@ -6,7 +6,7 @@ export class MemoryManagerEntry {
 
         this.isFree = true;
         this.next = null;
-        this.accessed = true;
+        this.accessed = false;
     }
 
     fit(size) {
@@ -14,11 +14,11 @@ export class MemoryManagerEntry {
     }
 
     alloc(size) {
-        // split here
-
         this.split(size);
+        // this.next.merge(); // additional cleanup
 
         this.isFree = false;
+        this.accessed = true;
         return this;
     }
 
@@ -49,31 +49,69 @@ export class MemoryManager {
 
     constructor(size) {
         this.size = size;
+        this.utilization = 0;
 
         this.head = new MemoryManagerEntry(0, size);
     }
 
     alloc(size) {
-
         let current = this.head;
-
         while (current.next != null) {
             if (current.fit(size)) {
-                return current.alloc(size);
+                let mme = current.alloc(size);
+                this.utilization += mme.size / this.size;
+                return mme;
             }
 
             current = current.next;
         }
         // last element
         if (current.fit(size)) {
-            return current.alloc(size);
+            let mme = current.alloc(size);
+            this.utilization += mme.size / this.size;
+            return mme;
         }
 
         return null;
     }
 
-    static free(element) {
-        MemoryManager.free();
+    free(element) {
+        if (!element.isFree) {
+            this.utilization -= element.size / this.size;
+        }
+
+        element.free();
+    }
+
+    freeBlocks() {
+        const result = [];
+
+        let current = this.head;
+        while (current.next != null) {
+            if (current.isFree) {
+                result.push(current);
+            }
+            current = current.next;
+        }
+        // last element
+        if (current.isFree) {
+            result.push(current);
+        }
+        return result;
+    }
+
+    allBlocks() {
+        const result = [];
+
+        let current = this.head;
+        while (current.next != null) {
+            result.push(current);
+            current = current.next;
+        }
+        // last element
+        result.push(current);
+
+        return result;
     }
 
 }

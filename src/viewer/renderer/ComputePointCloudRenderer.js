@@ -22,7 +22,7 @@ export class ComputePointCloudRenderer {
         this.initTextures();
         this.initUBOs();
 
-        this.pointBuffer = new PointBuffer(this.gl, 10 * 1000 * 1000);
+        this.pointBuffer = new PointBuffer(this.gl, 25 * 1000 * 1000);
 
         this.pointCloudShader = new Shader(this.gl, "PointCloudComputeShader");
         this.pointCloudShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['render.compute.glsl']);
@@ -110,35 +110,26 @@ export class ComputePointCloudRenderer {
     renderNodes(octree, nodes, visibilityTextureData, camera, target, shader, params) {
         if (exports.measureTimings) performance.mark("renderNodes-start");
 
-        let view = camera.matrixWorldInverse;
-        let worldView = new THREE.Matrix4();
-
-        const maxNodes = 50;
-        let pointsToAdd = 100 * 1000;
+        const maxNodes = 10;
 
         let numTotalPoints = nodes.map(n => n.getNumPoints()).reduce((a, b) => a + b, 0);
         let numPointsPerNode = Math.floor(this.pointBuffer.size / maxNodes);
-        // console.log(numTotalPoints);
-        // console.log(nodes);
+
         let i = 0;
         for (let node of nodes) {
 
-            // if (i > maxNodes) continue;
+            if (this.pointBuffer.require(node) && i < maxNodes) {
 
-            // let render = Math.random() * nodes.length < maxNodes;
-            // if (!render) continue;
-            // if (this.nodesUploaded.hasOwnProperty(nodeId) || pointsToAdd - node.getNumPoints() < 0) continue;
+                // randomly choose nodes to upload
+                // let render = Math.random() * nodes.length < maxNodes;
+                // if (!render) continue;
 
-            // let world = node.sceneNode.matrixWorld;
-            // let geometry = node.geometryNode.geometry;
+                this.pointBuffer.uploadNode(node);
 
-            this.pointBuffer.loadNode(node);
+                i++;
+            }
 
-            // pointsToAdd -= node.getNumPoints();
-            // window.pointsToAdd = Math.min(window.pointsToAdd ? window.pointsToAdd : pointsToAdd, pointsToAdd);
-            i++;
         }
-        // console.log(this.pointBuffer.nodesUploaded.size, nodes.length);
 
         if (exports.measureTimings) {
             performance.mark("renderNodes-end");
@@ -231,7 +222,7 @@ export class ComputePointCloudRenderer {
         // render points to texture
         this.pointCloudShader.use();
 
-        const renderAmount =  0.5 * 1000 * 1000;
+        const renderAmount =  5 * 1000 * 1000;
 
         this.pointCloudShader.setUniform1i("lastIdx", this.pointBuffer.size);
         this.pointCloudShader.setUniform1i("startIdx", this.startIdx);

@@ -16,7 +16,6 @@ export class PointBuffer {
         this.memoryManager = new MemoryManager(size);
 
         this.denseIdxSSBO = new SSBO(gl, this._gpuMemoryPoolSize, 1, 16); // 16 bytes because of packing (can be optimized)
-        this.freeDenseIdx = 0;
         this.streamPositionsSSBO = new SSBO(gl, streamSize, 4, 4);
         this.streamColorSSBO = new SSBO(gl, streamSize, 4, 4);
 
@@ -29,7 +28,13 @@ export class PointBuffer {
         // ssbo containing colors as vec4
         this.colorSSBO = new SSBO(gl, size, 4, 4);
 
-        let poolSize = this.positionsSSBO.byteSize() + this.modelMatrixSSBO.byteSize() + this.colorSSBO.byteSize();
+        let poolSize = this.positionsSSBO.byteSize()
+            + this.colorSSBO.byteSize()
+            + this.modelMatrixSSBO.byteSize()
+            + this.streamPositionsSSBO.byteSize()
+            + this.streamColorSSBO.byteSize()
+            + this.denseIdxSSBO.byteSize();
+
         poolSize /= 1024 * 1024;
         console.log(`allocating on gpu ${poolSize}MB`);
 
@@ -59,32 +64,43 @@ export class PointBuffer {
     }
 
     clear() {
-        // this.modelMatrixSSBO.clear();
-        // this.positionsSSBO.clear();
-        // this.colorSSBO.clear();
+        if (this.memoryManager.utilization > 0.95) {
+            this.collectGarbage = true;
+        }
 
-        // free memory that was not accessed in the last frame
-        this.nodesUploaded.forEach((entry, key, map) => {
-            if (!entry.accessed) {
-                entry.free();
-                map.delete(key);
+        for (let [key, entry] of this.nodesUploaded) {
+            /*
+                Stopping garbage collection if 25% of the memory is free to reduce processing time and to hold more data on the gpu
+             */
+            if (this.collectGarbage && this.memoryManager.utilization > 0.75 && !entry.accessed) {
+                // free memory that was not accessed in the last frame
+                this.memoryManager.free(entry);
+                this.nodesUploaded.delete(key);
             }
-        });
-        // flag elements as not accessed
-        this.nodesUploaded.forEach((entry, key) => {
+
+            // flag elements as not accessed
             entry.accessed = false;
-        })
+        }
+
+        this.collectGarbage = false;
     }
 
-    loadNode(node) {
-        const nodeId = node.geometryNode.id;
-        const numPoints = node.getNumPoints();
+    require(node) {
+        const nodeId = node.name;
 
         if (this.nodesUploaded.has(nodeId)) {
             // node already on gpu -> flag as accessed
             this.nodesUploaded.get(nodeId).accessed = true;
-            return;
+            return false;
         }
+
+        // node is required
+        return true;
+    }
+
+    uploadNode(node) {
+        const nodeId = node.name;
+        const numPoints = node.getNumPoints();
 
         const mme = this.memoryManager.alloc(numPoints);
         if (mme !== null) {
@@ -98,9 +114,10 @@ export class PointBuffer {
             this.streamColorSSBO.clear();
 
             this.nodesUploaded.set(nodeId, mme);
+        } else {
+            // no memory left in memory pool on gpu
+            this.collectGarbage = true;
         }
-
-        // no memory left on gpu
     }
 
     addGeometry(modelMatrix, geometry, numberOfPoints) {
@@ -150,9 +167,5 @@ export class PointBuffer {
         // this.gl.memoryBarrier(this.gl.SHADER_STORAGE_BARRIER_BIT);
         this.gl.dispatchCompute(Math.ceil(this._streamSize / 256), 1, 1);
         // this.gl.memoryBarrier(this.gl.SHADER_STORAGE_BARRIER_BIT);
-
-
-        // this.freeDenseIdx += numPoints;
-        // console.log(numPoints, this.pointsum, this.freeDenseIdx)
     }
 }
