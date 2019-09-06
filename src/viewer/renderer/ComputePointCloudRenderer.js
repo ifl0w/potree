@@ -138,19 +138,9 @@ export class ComputePointCloudRenderer {
     }
 
     renderOctree(octree, nodes, camera, target, params = {}) {
-        // let view = camera.matrixWorldInverse;
-        // let viewInv = camera.matrixWorld;
-        // let proj = camera.projectionMatrix;
-        // let projInv = new THREE.Matrix4().getInverse(proj);
-
         let visibilityTextureData = null;
 
         this.pointCloudShader.use();
-
-        // this.pointCloudShader.setUniformMatrix4("projectionMatrix", proj);
-        // this.pointCloudShader.setUniformMatrix4("viewMatrix", view);
-        // this.pointCloudShader.setUniformMatrix4("uViewInv", viewInv);
-        // this.pointCloudShader.setUniformMatrix4("uProjInv", projInv);
 
         this.renderNodes(octree, nodes, visibilityTextureData, camera, target, this.pointCloudShader, params);
     }
@@ -204,8 +194,6 @@ export class ComputePointCloudRenderer {
 
         this.reprojectShader.setUniformMatrix4("viewMatrix", camera.matrixWorldInverse);
         this.reprojectShader.setUniformMatrix4("projectionMatrix", camera.projectionMatrix);
-        // this.reprojectShader.setUniformMatrix4("lastFrameViewMatrix", this.lastFrameViewMatrix);
-        // this.reprojectShader.setUniformMatrix4("lastFrameProjectionMatrix", this.lastFrameProjectionMatrix);
 
         this.gl.bindImageTexture(0, this.renderTexture[this.pingPong(true)].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
         this.gl.bindImageTexture(1, this.positionTexture[this.pingPong(true)].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
@@ -275,9 +263,6 @@ export class ComputePointCloudRenderer {
 
         // Draw full screen quad
         this.drawQuadShader.use();
-
-        // this.gl.bindImageTexture(0, this.renderTexture[1].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
-        // this.gl.bindImageTexture(1, this.positionTexture[this.pingPong(true)].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
 
         this.renderTexture[this.pingPong(true)].bind(0);
         this.drawQuadShader.setUniformTexture('renderTexture', this.renderTexture[this.pingPong(true)].texture);

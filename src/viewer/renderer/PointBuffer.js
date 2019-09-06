@@ -18,14 +18,9 @@ export class PointBuffer {
         this.denseIdxSSBO = new SSBO(gl, this._gpuMemoryPoolSize, 1, 16); // 16 bytes because of packing (can be optimized)
         this.streamPositionsSSBO = new SSBO(gl, streamSize, 3, 4);
         this.streamColorSSBO = new SSBO(gl, streamSize, 4, 4);
-
-        // hard limit of 5000 nodes
-        this.modelMatrixSSBO = new SSBO(gl, 5000, 16, 4);
-
-        // ssbo containing vec4 (xyz = position, w = modelMatrixIndex)
+        // position pool containing vec4
         this.positionsSSBO = new SSBO(gl, size, 4, 4);
-
-        // ssbo containing colors as vec4
+        // color pool containing vec4
         this.colorSSBO = new SSBO(gl, size, 4, 4);
 
         let poolSize = this.positionsSSBO.byteSize()
@@ -35,13 +30,13 @@ export class PointBuffer {
             + this.denseIdxSSBO.byteSize();
 
         poolSize /= 1024 * 1024;
-        console.log(`allocating on gpu ${poolSize}MB`);
+        console.log(`Allocated ${poolSize.toFixed(2)}MB on GPU`);
 
         /*
-        key: nodeId;
-        value: MemoryManagerEntry
+            key: nodeId;
+            value: MemoryManagerEntry
         */
-        this.nodesUploaded = new Map();
+        this.uploadedNodes = new Map();
 
         this.distributeShader = new Shader(this.gl, "DistributeComputeShader");
         this.distributeShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['distribute.compute.glsl']);
@@ -67,19 +62,21 @@ export class PointBuffer {
             this.collectGarbage = true;
         }
 
-        for (let [key, entry] of this.nodesUploaded) {
-            /*
-                Stopping garbage collection if 25% of the memory is free to reduce processing time and to hold more data on the gpu
-             */
-            if (this.collectGarbage && this.memoryManager.utilization > 0.75 && !entry.accessed) {
-                // free memory that was not accessed in the last frame
-                this.memoryManager.free(entry);
-                this.nodesUploaded.delete(key);
-            }
+        if (this.collectGarbage) {
+            const sorted = Array.from(this.uploadedNodes.entries()).sort((a,b) => b[1].lastAccess - a[1].lastAccess);
 
-            // flag elements as not accessed
-            entry.accessed = false;
+            let garbage = sorted.pop();
+
+            // Stopping garbage collection if 25% of the memory is free to reduce processing time and to hold more data on the gpu
+            while (this.memoryManager.utilization > 0.75 && garbage[1].lastAccess < 0) {
+                this.memoryManager.free(garbage[1]);
+                this.uploadedNodes.delete(garbage[0]);
+                garbage = sorted.pop();
+            }
         }
+
+        // reduce last accessed count for all chunks
+        this.uploadedNodes.forEach(entry => entry.lastAccess--);
 
         this.collectGarbage = false;
     }
@@ -87,9 +84,9 @@ export class PointBuffer {
     require(node) {
         const nodeId = node.name;
 
-        if (this.nodesUploaded.has(nodeId)) {
+        if (this.uploadedNodes.has(nodeId)) {
             // node already on gpu -> flag as accessed
-            this.nodesUploaded.get(nodeId).accessed = true;
+            this.uploadedNodes.get(nodeId).lastAccess = 1;
             return false;
         }
 
@@ -106,20 +103,20 @@ export class PointBuffer {
             let world = node.sceneNode.matrixWorld;
             let geometry = node.geometryNode.geometry;
 
-            this.addGeometry(new Float32Array(world.elements), geometry, numPoints);
+            this.addGeometry(geometry);
             this.insertIntoGPUPool(numPoints, mme.address, world);
 
             this.streamPositionsSSBO.clear();
             this.streamColorSSBO.clear();
 
-            this.nodesUploaded.set(nodeId, mme);
+            this.uploadedNodes.set(nodeId, mme);
         } else {
             // no memory left in memory pool on gpu
             this.collectGarbage = true;
         }
     }
 
-    addGeometry(modelMatrix, geometry, numberOfPoints) {
+    addGeometry(geometry) {
         this.streamPositionsSSBO.appendData(geometry.attributes.position.array);
         this.streamColorSSBO.appendData(geometry.attributes.color.array);
     }

@@ -92,8 +92,8 @@ void main() {
     }
 
     uint storeIdx = indices[denseIdx];
+
     vec4 position = unpackPosition(int(linearIdx));
-    //    vec4 position = modelMatrix * vec4(newPositions[linearIdx].xyz, 1);
     vec4 color = unpackRGBA(int(linearIdx));
 
     points[storeIdx] = position;

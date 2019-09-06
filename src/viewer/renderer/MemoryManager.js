@@ -6,7 +6,7 @@ export class MemoryManagerEntry {
 
         this.isFree = true;
         this.next = null;
-        this.accessed = false;
+        this.lastAccess = 0;
     }
 
     fit(size) {
@@ -18,7 +18,7 @@ export class MemoryManagerEntry {
         // this.next.merge(); // additional cleanup
 
         this.isFree = false;
-        this.accessed = true;
+        this.lastAccess = 0;
         return this;
     }
 

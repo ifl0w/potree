@@ -23,12 +23,6 @@ layout(binding=1, rgba32f) uniform writeonly image2D positionTexture;
 layout(binding=2, rgba32f) uniform readonly image2D readColorTexture;
 layout(binding=3, rgba32f) uniform readonly image2D readPositionTexture;
 
-layout(std140, binding=0) buffer ModelMatices
-{
-    mat4 modelMatrices[];
-};
-
-
 layout(std140, binding=1) buffer PositionBuffer
 {
     vec4 points[];// xyz = position, w = modelMatrixIndex

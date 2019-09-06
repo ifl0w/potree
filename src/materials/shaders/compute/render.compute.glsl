@@ -20,11 +20,6 @@ layout(std140, binding = 0) uniform screenData
 layout(binding=6, rgba32f) uniform writeonly image2D colorTexture;
 layout(binding=7, rgba32f) uniform writeonly image2D positionTexture;
 
-layout(std140, binding=0) buffer ModelMatices
-{
-    mat4 modelMatrices[];
-};
-
 layout(std140, binding=1) buffer PositionBuffer
 {
     vec4 points[];// xyz = position, w = modelMatrixIndex
