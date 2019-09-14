@@ -167,7 +167,7 @@ export class ComputePointCloudRenderer {
         this.reprojectLastFrame(camera);
 
         this.clearImageBuffer(this.pingPong(false));
-        this.swapImageBuffer();
+        // this.swapImageBuffer();
 
         for (const octree of traversalResult.octrees) {
             let nodes = octree.visibleNodes;
@@ -180,7 +180,7 @@ export class ComputePointCloudRenderer {
         this.resolveBuffer(camera);
 
         this.displayResult();
-        this.swapImageBuffer();
+        // this.swapImageBuffer();
 
         // CLEANUP
         // gl.activeTexture(gl.TEXTURE1);
@@ -245,11 +245,11 @@ export class ComputePointCloudRenderer {
         this.gl.bindImageTexture(0, this.renderTexture[2].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
         this.gl.bindImageTexture(1, this.positionTexture[2].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
 
-        this.gl.bindImageTexture(2, this.renderTexture[this.pingPong(false)].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
-        this.gl.bindImageTexture(3, this.positionTexture[this.pingPong(false)].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
+        this.gl.bindImageTexture(2, this.renderTexture[this.pingPong(true)].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
+        this.gl.bindImageTexture(3, this.positionTexture[this.pingPong(true)].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
 
-        this.gl.bindImageTexture(4, this.renderTexture[this.pingPong(true)].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
-        this.gl.bindImageTexture(5, this.positionTexture[this.pingPong(true)].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
+        this.gl.bindImageTexture(4, this.renderTexture[this.pingPong(false)].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
+        this.gl.bindImageTexture(5, this.positionTexture[this.pingPong(false)].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
 
         this.gl.dispatchCompute(
             Math.ceil(this.renderTexture[this.pingPong(false)].width / 16),
@@ -264,8 +264,8 @@ export class ComputePointCloudRenderer {
         // Draw full screen quad
         this.drawQuadShader.use();
 
-        this.renderTexture[this.pingPong(true)].bind(0);
-        this.drawQuadShader.setUniformTexture('renderTexture', this.renderTexture[this.pingPong(true)].texture);
+        this.renderTexture[this.pingPong(false)].bind(0);
+        this.drawQuadShader.setUniformTexture('renderTexture', this.renderTexture[this.pingPong(false)].texture);
 
         this.gl.bindVertexArray(this.quad.vao);
         this.gl.drawElements(this.gl.TRIANGLES, 6, this.gl.UNSIGNED_SHORT, 0);
