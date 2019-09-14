@@ -194,6 +194,8 @@ export class ComputePointCloudRenderer {
 
         this.reprojectShader.setUniformMatrix4("viewMatrix", camera.matrixWorldInverse);
         this.reprojectShader.setUniformMatrix4("projectionMatrix", camera.projectionMatrix);
+        const vp = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+        this.reprojectShader.setUniformMatrix4("viewProjectionMatrix", vp);
 
         this.gl.bindImageTexture(0, this.renderTexture[this.pingPong(true)].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
         this.gl.bindImageTexture(1, this.positionTexture[this.pingPong(true)].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
@@ -210,13 +212,15 @@ export class ComputePointCloudRenderer {
         // render points to texture
         this.pointCloudShader.use();
 
-        const renderAmount =  5 * 1000 * 1000;
+        const renderAmount =  0.1 * 1000 * 1000;
 
         this.pointCloudShader.setUniform1i("lastIdx", this.pointBuffer.size);
         this.pointCloudShader.setUniform1i("startIdx", this.startIdx);
         this.pointCloudShader.setUniform1i("renderAmount", renderAmount);
         this.pointCloudShader.setUniformMatrix4("viewMatrix", camera.matrixWorldInverse);
         this.pointCloudShader.setUniformMatrix4("projectionMatrix", camera.projectionMatrix);
+        const vp = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+        this.pointCloudShader.setUniformMatrix4("viewProjectionMatrix", vp);
 
         // this.pointBuffer.modelMatrixSSBO.bind(0);
         this.pointBuffer.positionsSSBO.bind(1);
@@ -241,6 +245,8 @@ export class ComputePointCloudRenderer {
 
         this.resolveShader.setUniformMatrix4("viewMatrix", camera.matrixWorldInverse);
         this.resolveShader.setUniformMatrix4("projectionMatrix", camera.projectionMatrix);
+        const vp = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+        this.resolveShader.setUniformMatrix4("viewProjectionMatrix", vp);
 
         this.gl.bindImageTexture(0, this.renderTexture[2].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
         this.gl.bindImageTexture(1, this.positionTexture[2].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);

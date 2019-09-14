@@ -7,6 +7,7 @@ uniform mat4 viewMatrix;
 uniform mat4 modelMatrix;
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
+uniform mat4 viewProjectionMatrix;
 
 uniform int lastIdx;
 uniform int startIdx;
@@ -33,7 +34,7 @@ layout(std140, binding=2) buffer ColorBuffer
 layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 
 void main() {
-    mat4 viewProjectionMatrix = projectionMatrix * viewMatrix;
+//    mat4 viewProjectionMatrix = projectionMatrix * viewMatrix;
 
     uint linearIdx = gl_GlobalInvocationID.x * gl_GlobalInvocationID.y + gl_GlobalInvocationID.x;
     linearIdx += uint(startIdx);

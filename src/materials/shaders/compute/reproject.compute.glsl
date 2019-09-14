@@ -7,6 +7,7 @@ uniform mat4 viewMatrix;
 uniform mat4 modelMatrix;
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
+uniform mat4 viewProjectionMatrix;
 
 uniform mat4 lastFrameViewMatrix;
 uniform mat4 lastFrameProjectionMatrix;
@@ -37,7 +38,7 @@ layout(std140, binding=2) buffer ColorBuffer
 layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 void main() {
-    mat4 viewProjectionMatrix = projectionMatrix * viewMatrix;
+//    mat4 t = projectionMatrix * viewMatrix;
 
     vec4 lastColor = imageLoad(readColorTexture, ivec2(gl_GlobalInvocationID.xy));
     vec4 lastWorldPos = imageLoad(readPositionTexture, ivec2(gl_GlobalInvocationID.xy));

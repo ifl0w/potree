@@ -7,6 +7,7 @@ uniform mat4 viewMatrix;
 uniform mat4 modelMatrix;
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
+uniform mat4 viewProjectionMatrix;
 
 uniform mat4 lastFrameViewMatrix;
 uniform mat4 lastFrameProjectionMatrix;
@@ -37,7 +38,7 @@ void store(vec4 color, vec4 position) {
 }
 
 void main() {
-    mat4 viewProjectionMatrix = projectionMatrix * viewMatrix;
+//    mat4 viewProjectionMatrix = projectionMatrix * viewMatrix;
     ivec2 storePos = ivec2(gl_GlobalInvocationID.xy);
 
     vec4 reprojectedColor = imageLoad(reprojectedColorTexture, storePos);
