@@ -8,37 +8,81 @@
 	<title>Potree Viewer</title>
 
 	<link rel="stylesheet" type="text/css" href="../../build/potree/potree.css">
-	<link rel="stylesheet" type="text/css" href="../../libs/jquery-ui/jquery-ui.min.css">
-	<link rel="stylesheet" type="text/css" href="../../libs/openlayers3/ol.css">
-	<link rel="stylesheet" type="text/css" href="../../libs/spectrum/spectrum.css">
-	<link rel="stylesheet" type="text/css" href="../../libs/jstree/themes/mixed/style.css">
+<!--	<link rel="stylesheet" type="text/css" href="../../libs/jquery-ui/jquery-ui.min.css">-->
+<!--	<link rel="stylesheet" type="text/css" href="../../libs/openlayers3/ol.css">-->
+<!--	<link rel="stylesheet" type="text/css" href="../../libs/spectrum/spectrum.css">-->
+<!--	<link rel="stylesheet" type="text/css" href="../../libs/jstree/themes/mixed/style.css">-->
+
+	<link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+	<link href="https://cdn.jsdelivr.net/npm/@mdi/font@3.x/css/materialdesignicons.min.css" rel="stylesheet">
+	<link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
 </head>
 
 <body>
 	<script src="../../libs/jquery/jquery-3.1.1.min.js"></script>
-	<script src="../../libs/spectrum/spectrum.js"></script>
-	<script src="../../libs/jquery-ui/jquery-ui.min.js"></script>
+<!--	<script src="../../libs/spectrum/spectrum.js"></script>-->
+<!--	<script src="../../libs/jquery-ui/jquery-ui.min.js"></script>-->
 	<script src="../../libs/three.js/build/three.min.js"></script>
 	<script src="../../libs/other/BinaryHeap.js"></script>
 	<script src="../../libs/tween/tween.min.js"></script>
-	<script src="../../libs/d3/d3.js"></script>
+<!--	<script src="../../libs/d3/d3.js"></script>-->
 	<script src="../../libs/proj4/proj4.js"></script>
-	<script src="../../libs/openlayers3/ol.js"></script>
-	<script src="../../libs/i18next/i18next.js"></script>
-	<script src="../../libs/jstree/jstree.js"></script>
+<!--	<script src="../../libs/openlayers3/ol.js"></script>-->
+<!--	<script src="../../libs/i18next/i18next.js"></script>-->
+<!--	<script src="../../libs/jstree/jstree.js"></script>-->
 	<script src="../../build/potree/potree.js"></script>
 	<script src="../../libs/plasio/js/laslaz.js"></script>
 	
 	<!-- INCLUDE ADDITIONAL DEPENDENCIES HERE -->
+
+
+	<script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
 	<!-- INCLUDE SETTINGS HERE -->
 	
 	<div class="potree_container" style="position: absolute; width: 100%; height: 100%; left: 0px; top: 0px; ">
 		<div id="potree_render_area"></div>
-		<div id="potree_sidebar_container"> </div>
+
+<!--		<div id="app">-->
+<!--			<v-app>-->
+<!--				<v-content>-->
+<!--					<v-container>Hello world</v-container>-->
+
+<!--					<v-bottom-sheet v-model="sheet">-->
+<!--						<template v-slot:activator="{ on }">-->
+<!--							<v-btn-->
+<!--									color="purple"-->
+<!--									dark-->
+<!--									v-on="on"-->
+<!--							>-->
+<!--								Open Usage-->
+<!--							</v-btn>-->
+<!--						</template>-->
+<!--						<v-sheet class="text-center" height="200px">-->
+<!--							<v-btn-->
+<!--									class="mt-6"-->
+<!--									flat-->
+<!--									color="red"-->
+<!--									@click="sheet = !sheet"-->
+<!--							>close</v-btn>-->
+<!--							<div>The basic usage of v-bottom-sheet. Almost any content can be placed inside this component</div>-->
+<!--						</v-sheet>-->
+<!--					</v-bottom-sheet>-->
+<!--				</v-content>-->
+<!--			</v-app>-->
+<!--		</div>-->
 	</div>
 	
 	<script>
-	
+		// new Vue({
+		// 	el: '#app',
+		// 	vuetify: new Vuetify(),
+		// 	data: () => ({
+		// 		sheet: false,
+		// 	})
+		// });
+
+
 		window.viewer = new Potree.Viewer(document.getElementById("potree_render_area"), {useComputeShader: true});
 		
 		viewer.setEDLEnabled(true);
@@ -73,7 +117,6 @@
 		});
 		
 	</script>
-	
 	
   </body>
 </html>

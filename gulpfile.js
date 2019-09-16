@@ -456,4 +456,25 @@ gulp.task('watch', gulp.parallel("build", "pack", "webserver", async function() 
 
 }));
 
+gulp.task('watch-compute', gulp.parallel("build", "pack", "webserver", async function(done) {
+
+	let watchlist = [
+		'src/**/*.js',
+		'src/**/*.css',
+		'src/**/*.html',
+		'src/**/*.vs',
+		'src/**/*.fs',
+		'src/**/*.glsl',
+		'resources/**/*',
+		'examples//**/*.json',
+		'!resources/icons/index.html',
+	];
+
+	watch(watchlist, gulp.series("build", "pack", async function() {
+		gulp.src('./build/**/*').pipe(gulp.dest('./examples-webgl2-compute/public/build'));
+	}));
+
+	gulp.src('./build/**/*').pipe(gulp.dest('./examples-webgl2-compute/public/build'));
+	done();
+}));
 
