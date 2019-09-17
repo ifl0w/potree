@@ -361,19 +361,24 @@ export class ComputePointCloudRenderer {
         this.clearFrame();
     }
 
-    // public interface
-    getMemoryUtilization() {
-        return this.pointBuffer.memoryManager.utilization;
-    }
-
     getFPS() {
         // return this.fps.toFixed(2);
         return this._fpsAverage.toFixed(2);
     }
 
+    // public interface
+    getMemoryUtilization() {
+        return this.pointBuffer.memoryManager.utilization;
+    }
+
+    get numNodesUploaded() {
+        return this.pointBuffer.uploadedNodes.size;
+    }
+
     set pointPoolSize(poolSize) {
         this.pointBuffer = new PointBuffer(this.gl, poolSize);
     }
+
     get pointPoolSize() {
         return this.pointBuffer.size;
     }
