@@ -50,8 +50,18 @@ export class ComputePointCloudRenderer {
         this.lastFrameViewMatrix = new Float32Array(16);
         this.lastFrameProjectionMatrix = new Float32Array(16);
 
+        this.pointsPerFrame = 1000000;
+        this.maxNodesPerFrame = 0; // 0 = unlimited
+
         this.toggle = 0;
         this.startIdx = 0;
+
+        this._fps = 0;
+        this._fpsSum = 0;
+        this._lastTimeStamp = -1;
+        this._fpsSamples = 0;
+        this._timePassed = 0;
+        this._fpsAverage = 0; // average over one second
     }
 
     initTextures() {
@@ -110,7 +120,7 @@ export class ComputePointCloudRenderer {
     renderNodes(octree, nodes, visibilityTextureData, camera, target, shader, params) {
         if (exports.measureTimings) performance.mark("renderNodes-start");
 
-        const maxNodes = nodes.length;
+        const maxNodes = Math.min(this.maxNodesPerFrame, nodes.length);
 
         let numTotalPoints = nodes.map(n => n.getNumPoints()).reduce((a, b) => a + b, 0);
         let numPointsPerNode = Math.floor(this.pointBuffer.size / maxNodes);
@@ -118,11 +128,17 @@ export class ComputePointCloudRenderer {
         let i = 0;
         for (let node of nodes) {
 
-            if (this.pointBuffer.require(node) && i < maxNodes) {
+            if (this.pointBuffer.require(node)) {
 
                 // randomly choose nodes to upload
-                // let render = Math.random() * nodes.length < maxNodes;
-                // if (!render) continue;
+                if(this.maxNodesPerFrame > 0) { // max nodes enabled
+                    if(i >= maxNodes) {
+                        continue;
+                    }
+
+                    let render = Math.random() * nodes.length < maxNodes;
+                    if (!render) continue;
+                }
 
                 this.pointBuffer.uploadNode(node);
 
@@ -145,7 +161,29 @@ export class ComputePointCloudRenderer {
         this.renderNodes(octree, nodes, visibilityTextureData, camera, target, this.pointCloudShader, params);
     }
 
+    _calculateFps() {
+        if (this._lastTimeStamp) {
+            const delta = performance.now() - this._lastTimeStamp;
+            this._fps = 1000 / delta;
+
+            this._timePassed += delta;
+            this._fpsSum += this._fps;
+            this._fpsSamples++;
+
+            if (this._timePassed > 1000) {
+                this._fpsAverage = this._fpsSum / 60;
+
+                this._fpsSamples = 0;
+                this._timePassed = 0;
+                this._fpsSum = 0;
+            }
+        }
+
+        this._lastTimeStamp = performance.now();
+    }
+
     render(scene, camera, target = null, params = {}) {
+        this._calculateFps();
 
         const gl = this.gl;
 
@@ -175,7 +213,7 @@ export class ComputePointCloudRenderer {
         }
 
         this.renderPoints(camera);
-        this.pointBuffer.clear();
+        this.pointBuffer.finishFrame();
 
         this.resolveBuffer(camera);
 
@@ -212,7 +250,7 @@ export class ComputePointCloudRenderer {
         // render points to texture
         this.pointCloudShader.use();
 
-        const renderAmount =  0.1 * 1000 * 1000;
+        const renderAmount = this.pointsPerFrame;
 
         this.pointCloudShader.setUniform1i("lastIdx", this.pointBuffer.size);
         this.pointCloudShader.setUniform1i("startIdx", this.startIdx);
@@ -306,4 +344,42 @@ export class ComputePointCloudRenderer {
             return this.pingPongIdx === 1 ? 1 : 0;
         }
     }
+
+    clearFrame() {
+        this.clearImageBuffer(0);
+        this.clearImageBuffer(1);
+        this.clearImageBuffer(2);
+    }
+
+    clearPool() {
+        this.pointBuffer.clear();
+    }
+
+
+    clearAll() {
+        this.clearPool();
+        this.clearFrame();
+    }
+
+    // public interface
+    getMemoryUtilization() {
+        return this.pointBuffer.memoryManager.utilization;
+    }
+
+    getFPS() {
+        // return this.fps.toFixed(2);
+        return this._fpsAverage.toFixed(2);
+    }
+
+    set pointPoolSize(poolSize) {
+        this.pointBuffer = new PointBuffer(this.gl, poolSize);
+    }
+    get pointPoolSize() {
+        return this.pointBuffer.size;
+    }
+
+    get pointPoolSizeInMB() {
+        return this.pointBuffer.allocatedStorage();
+    }
+
 }

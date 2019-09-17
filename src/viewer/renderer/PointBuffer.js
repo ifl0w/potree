@@ -23,14 +23,7 @@ export class PointBuffer {
         // color pool containing vec4
         this.colorSSBO = new SSBO(gl, size, 4, 4);
 
-        let poolSize = this.positionsSSBO.byteSize()
-            + this.colorSSBO.byteSize()
-            + this.streamPositionsSSBO.byteSize()
-            + this.streamColorSSBO.byteSize()
-            + this.denseIdxSSBO.byteSize();
-
-        poolSize /= 1024 * 1024;
-        console.log(`Allocated ${poolSize.toFixed(2)}MB on GPU`);
+        console.log(`Allocated ${this.allocatedStorage()}MB on GPU`);
 
         /*
             key: nodeId;
@@ -49,15 +42,26 @@ export class PointBuffer {
         this.initDenseIdxSSBO();
     }
 
+    allocatedStorage() {
+        let poolSize = this.positionsSSBO.byteSize()
+            + this.colorSSBO.byteSize()
+            + this.streamPositionsSSBO.byteSize()
+            + this.streamColorSSBO.byteSize()
+            + this.denseIdxSSBO.byteSize();
+
+        return (poolSize / (1024 * 1024)).toFixed(2);
+    }
     initDenseIdxSSBO() {
         this.distributeShader.use();
+
+        this.distributeShader.setUniform1i('poolSize', this._gpuMemoryPoolSize);
 
         this.denseIdxSSBO.bind(0);
 
         this.gl.dispatchCompute(Math.ceil(this._gpuMemoryPoolSize / 256), 1, 1);
     }
 
-    clear() {
+    finishFrame() {
         if (this.memoryManager.utilization > 0.95) {
             this.collectGarbage = true;
         }
@@ -79,6 +83,16 @@ export class PointBuffer {
         this.uploadedNodes.forEach(entry => entry.lastAccess--);
 
         this.collectGarbage = false;
+    }
+
+    clear() {
+        // position pool containing vec4
+        this.positionsSSBO = new SSBO(this.gl, this.size, 4, 4);
+        // color pool containing vec4
+        this.colorSSBO = new SSBO(this.gl, this.size, 4, 4);
+
+        this.memoryManager = new MemoryManager(this.size);
+        this.uploadedNodes.clear();
     }
 
     require(node) {
