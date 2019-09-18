@@ -34,6 +34,16 @@ export class ComputePointCloudRenderer {
         this.reprojectShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['reproject.compute.glsl']);
         this.reprojectShader.linkProgram();
 
+        this.resolveDepthSSBO = new SSBO(this.gl, window.innerWidth * window.innerHeight, 1, 4);
+
+        this.clearDepthShader = new Shader(this.gl, "ClearDepthComputeShader");
+        this.clearDepthShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['cleardepth.compute.glsl']);
+        this.clearDepthShader.linkProgram();
+
+        this.depthPassShader = new Shader(this.gl, "DepthPassComputeShader");
+        this.depthPassShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['depthpass.compute.glsl']);
+        this.depthPassShader.linkProgram();
+
         this.resolveShader = new Shader(this.gl, "ResolveComputeShader");
         this.resolveShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['resolve.compute.glsl']);
         this.resolveShader.linkProgram();
@@ -77,17 +87,6 @@ export class ComputePointCloudRenderer {
             new Texture(this.gl, window.innerWidth, window.innerHeight, true),
             new Texture(this.gl, window.innerWidth, window.innerHeight, true),
         ];
-
-        this.resolveDepthTexture = new DepthTexture(this.gl, window.innerWidth, window.innerHeight, true);
-        this.resolveDepthSSBO = new SSBO(this.gl, window.innerWidth * window.innerHeight, 1, 4);
-
-        this.clearDepthShader = new Shader(this.gl, "ClearDepthComputeShader");
-        this.clearDepthShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['cleardepth.compute.glsl']);
-        this.clearDepthShader.linkProgram();
-
-        this.depthPassShader = new Shader(this.gl, "DepthPassComputeShader");
-        this.depthPassShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['depthpass.compute.glsl']);
-        this.depthPassShader.linkProgram();
 
         this.pingPongIdx = 0;
     }
@@ -308,15 +307,12 @@ export class ComputePointCloudRenderer {
         // depth pass
         this.depthPassShader.use();
 
-        this.depthPassShader.setUniformMatrix4("viewMatrix", camera.matrixWorldInverse);
-        this.depthPassShader.setUniformMatrix4("projectionMatrix", camera.projectionMatrix);
         const vp = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
         this.depthPassShader.setUniformMatrix4("viewProjectionMatrix", vp);
 
         this.gl.bindImageTexture(1, this.positionTexture[2].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
         this.gl.bindImageTexture(3, this.positionTexture[this.pingPong(true)].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
 
-        this.gl.bindImageTexture(7, this.resolveDepthTexture.texture, 0, false, 0, this.gl.READ_WRITE, this.gl.R32I);
         this.resolveDepthSSBO.bind(6);
 
         this.gl.dispatchCompute(
@@ -342,7 +338,6 @@ export class ComputePointCloudRenderer {
         this.gl.bindImageTexture(4, this.renderTexture[this.pingPong(false)].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
         this.gl.bindImageTexture(5, this.positionTexture[this.pingPong(false)].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
 
-        this.gl.bindImageTexture(7, this.resolveDepthTexture.texture, 0, false, 0, this.gl.READ_WRITE, this.gl.R32I);
         this.resolveDepthSSBO.bind(6);
 
         this.gl.dispatchCompute(

@@ -3,10 +3,6 @@
 precision highp image2D;
 precision highp float;
 
-uniform mat4 viewMatrix;
-uniform mat4 modelMatrix;
-uniform mat4 modelViewMatrix;
-uniform mat4 projectionMatrix;
 uniform mat4 viewProjectionMatrix;
 
 uniform mat4 lastFrameViewMatrix;
@@ -22,10 +18,7 @@ layout(std140, binding = 0) uniform screenData
 layout(binding=1, rgba32f) uniform readonly image2D newPositionTexture;
 layout(binding=3, rgba32f) uniform readonly image2D reprojectedPositionTexture;
 
-precision highp iimage2D;
-precision highp uimage2D;
-layout(binding=7, r32f) uniform image2D depthBuffer;
-
+// using shader storage buffer since imageAtomicMin does not work.
 layout(std430, binding = 6) buffer depthData
 {
     int depth[];
