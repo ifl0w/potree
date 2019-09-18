@@ -1,7 +1,7 @@
 #version 310 es
 
-precision mediump image2D;
-precision mediump float;
+precision highp image2D;
+precision highp float;
 
 uniform mat4 viewMatrix;
 uniform mat4 modelMatrix;
@@ -28,13 +28,43 @@ layout(binding=3, rgba32f) uniform readonly image2D reprojectedPositionTexture;
 layout(binding=4, rgba32f) uniform writeonly image2D targetColorTexture;
 layout(binding=5, rgba32f) uniform writeonly image2D targetPositionTexture;
 
+precision highp iimage2D;
+precision highp uimage2D;
+layout(binding=7, r32f) uniform image2D depthBuffer;
+
+layout(std430, binding = 6) buffer depthData
+{
+    int depth[];
+};
+
 
 layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 void store(vec4 color, vec4 position) {
     ivec2 storePos = ivec2(gl_GlobalInvocationID.xy);
-    imageStore(targetColorTexture, storePos, color);
-    imageStore(targetPositionTexture, storePos, position);
+
+    vec4 p = viewProjectionMatrix * position;
+    float d = p.z / p.w;
+
+    int size = 2;
+    //    int size = max(12 - int(log2(length(p))), 1);
+    for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
+            ivec2 offset = ivec2(-size/2, -size/2) + ivec2(i, j);
+            ivec2 tmpPos = storePos + offset;
+            int linearIdx = int(resolution.x) * tmpPos.y + tmpPos.x;
+            if (linearIdx < 0 || linearIdx > int(resolution.x * resolution.y)) {
+                continue;
+            }
+
+            if (d > intBitsToFloat(depth[linearIdx])) {
+                continue;
+            }
+
+            imageStore(targetColorTexture, tmpPos, color);
+            imageStore(targetPositionTexture, tmpPos, position);
+        }
+    }
 }
 
 void main() {
@@ -47,24 +77,28 @@ void main() {
     vec4 newColor = imageLoad(newColorTexture, storePos);
     vec4 newPos = imageLoad(newPositionTexture, storePos);
 
-    if (newColor == vec4(0)) {
-        store(reprojectedColor, reprojectedPos);
+    if(newColor == vec4(0) && reprojectedColor == vec4(0)) {
         return;
     }
 
-    if (reprojectedColor == vec4(0)) {
+    if (newColor != vec4(0)) {
         store(newColor, newPos);
-        return;
+//        return;
     }
 
-    vec4 p1 = viewProjectionMatrix * reprojectedPos;
-    p1 = p1 / p1.w;
-    vec4 p2 = viewProjectionMatrix * newPos;
-    p2 = p2 / p2.w;
-
-    if (p2.z < p1.z) {
-        store(newColor, newPos);
-    } else {
+    if (reprojectedColor != vec4(0)) {
         store(reprojectedColor, reprojectedPos);
+//        return;
     }
+
+//    vec4 p1 = viewProjectionMatrix * reprojectedPos;
+//    p1 = p1 / p1.w;
+//    vec4 p2 = viewProjectionMatrix * newPos;
+//    p2 = p2 / p2.w;
+
+//    if (p2.z < p1.z) {
+//        store(newColor, newPos);
+//    } else {
+//        store(reprojectedColor, reprojectedPos);
+//    }
 }

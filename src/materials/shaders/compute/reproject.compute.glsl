@@ -65,4 +65,14 @@ void main() {
 
     imageStore(colorTexture, storePos, newColor);
     imageStore(positionTexture, storePos, lastWorldPos);// world position does not change
+
+//    int size = 1;
+//    for (int i = 0; i < size; i++) {
+//        for (int j = 0; j < size; j++) {
+//            ivec2 offset = ivec2(-size/2, -size/2) + ivec2(i, j);
+//
+//            imageStore(colorTexture, storePos + offset, newColor);
+//            imageStore(positionTexture, storePos + offset, lastWorldPos);// world position does not change
+//        }
+//    }
 }

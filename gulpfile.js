@@ -71,6 +71,8 @@ let shaders = [
 	"src/materials/shaders/blur.fs",
 
 	// WebGL 2.0 Compute Demo
+	"src/materials/shaders/compute/cleardepth.compute.glsl",
+	"src/materials/shaders/compute/depthpass.compute.glsl",
 	"src/materials/shaders/compute/distribute.compute.glsl",
 	"src/materials/shaders/compute/insert.compute.glsl",
 	"src/materials/shaders/compute/render.compute.glsl",

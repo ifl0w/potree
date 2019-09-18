@@ -39,6 +39,7 @@ void main() {
     uint linearIdx = gl_GlobalInvocationID.x * gl_GlobalInvocationID.y + gl_GlobalInvocationID.x;
     linearIdx += uint(startIdx);
 
+//    linearIdx = uint(int(linearIdx) % int(lastIdx));
     if (linearIdx >= uint(lastIdx)) {
         return;
     }
@@ -66,4 +67,14 @@ void main() {
 
     imageStore(positionTexture, storePos, worldPosition);
     imageStore(colorTexture, storePos, pointColor);
+
+//    int size = 1;
+//    for (int i = 0; i < size; i++) {
+//        for (int j = 0; j < size; j++) {
+//            ivec2 offset = ivec2(-size/2, -size/2) + ivec2(i, j);
+//
+//            imageStore(positionTexture, storePos + offset, worldPosition);
+//            imageStore(colorTexture, storePos + offset, pointColor);
+//        }
+//    }
 }
