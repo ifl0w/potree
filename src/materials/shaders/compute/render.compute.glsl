@@ -39,11 +39,7 @@ void main() {
 
     uint linearIdx = gl_GlobalInvocationID.x * gl_GlobalInvocationID.y + gl_GlobalInvocationID.x;
     linearIdx += uint(startIdx);
-
-//    linearIdx = uint(int(linearIdx) % int(lastIdx));
-    if (linearIdx >= uint(lastIdx)) {
-        return;
-    }
+    linearIdx = uint(int(linearIdx) % int(lastIdx));
 
     vec4 pointData = points[linearIdx];
 
