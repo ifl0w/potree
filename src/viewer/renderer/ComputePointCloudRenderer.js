@@ -21,6 +21,10 @@ export class ComputePointCloudRenderer {
             this.initUBOs();
         });
 
+        this._pointSize = 2;
+        this.pointsPerFrame = 1000000;
+        this.maxNodesPerFrame = 0; // 0 = unlimited
+
         this.initTextures();
         this.initUBOs();
 
@@ -62,9 +66,6 @@ export class ComputePointCloudRenderer {
         this.lastFrameViewMatrix = new Float32Array(16);
         this.lastFrameProjectionMatrix = new Float32Array(16);
 
-        this.pointsPerFrame = 1000000;
-        this.maxNodesPerFrame = 0; // 0 = unlimited
-
         this.toggle = 0;
         this.startIdx = 0;
 
@@ -99,8 +100,13 @@ export class ComputePointCloudRenderer {
         }
 
         gl.bindBuffer(gl.UNIFORM_BUFFER, this.resolutionUBO);
-        let resolution = new Float32Array([window.innerWidth, window.innerHeight]);
-        gl.bufferData(gl.UNIFORM_BUFFER, resolution, gl.STATIC_READ);
+        const data = new ArrayBuffer(3*4);
+        const dataViewFloat = new Float32Array(data);
+        const dataViewInt = new Int32Array(data);
+        dataViewFloat[0] = window.innerWidth;
+        dataViewFloat[1] = window.innerHeight;
+        dataViewInt[2] = this._pointSize;
+        gl.bufferData(gl.UNIFORM_BUFFER, data, gl.STATIC_READ);
         gl.bindBuffer(gl.UNIFORM_BUFFER, null);
     }
 
@@ -430,6 +436,11 @@ export class ComputePointCloudRenderer {
 
     get pointPoolSizeInMB() {
         return this.pointBuffer.allocatedStorage();
+    }
+
+    set pointSize(size) {
+        this._pointSize = size;
+        this.initUBOs();
     }
 
 }

@@ -16,6 +16,7 @@ uniform int renderAmount;
 layout(std140, binding = 0) uniform screenData
 {
     vec2 resolution;
+    int pointSize;
 };
 
 layout(binding=6, rgba32f) uniform writeonly image2D colorTexture;

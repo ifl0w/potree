@@ -6,6 +6,7 @@ precision highp float;
 layout(std140, binding = 0) uniform screenData
 {
     vec2 resolution;
+    int pointSize;
 };
 
 layout(std430, binding = 6) buffer depthData

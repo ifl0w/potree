@@ -17,6 +17,7 @@ uniform int lastIdx;
 layout(std140, binding = 0) uniform screenData
 {
     vec2 resolution;
+    int pointSize;
 };
 
 layout(binding=0, rgba32f) uniform writeonly image2D colorTexture;

@@ -13,6 +13,7 @@ uniform int lastIdx;
 layout(std140, binding = 0) uniform screenData
 {
     vec2 resolution;
+    int pointSize;
 };
 
 layout(binding=1, rgba32f) uniform readonly image2D newPositionTexture;
@@ -32,7 +33,7 @@ void store(vec4 position) {
     vec4 p = viewProjectionMatrix * position;
     float d = p.z / p.w;
 
-    int size = 2;
+    int size = pointSize;
 //    int size = max(12 - int(log2(length(p))), 1);
     for (int i = 0; i < size; i++) {
         for (int j = 0; j < size; j++) {

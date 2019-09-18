@@ -2,6 +2,7 @@
 
 precision highp image2D;
 precision highp float;
+precision highp int;
 
 uniform mat4 viewMatrix;
 uniform mat4 modelMatrix;
@@ -17,6 +18,7 @@ uniform int lastIdx;
 layout(std140, binding = 0) uniform screenData
 {
     vec2 resolution;
+    int pointSize;
 };
 
 layout(binding=0, rgba32f) uniform readonly image2D newColorTexture;
@@ -27,10 +29,6 @@ layout(binding=3, rgba32f) uniform readonly image2D reprojectedPositionTexture;
 
 layout(binding=4, rgba32f) uniform writeonly image2D targetColorTexture;
 layout(binding=5, rgba32f) uniform writeonly image2D targetPositionTexture;
-
-precision highp iimage2D;
-precision highp uimage2D;
-layout(binding=7, r32f) uniform image2D depthBuffer;
 
 layout(std430, binding = 6) buffer depthData
 {
@@ -46,7 +44,7 @@ void store(vec4 color, vec4 position) {
     vec4 p = viewProjectionMatrix * position;
     float d = p.z / p.w;
 
-    int size = 2;
+    int size = pointSize;
     //    int size = max(12 - int(log2(length(p))), 1);
     for (int i = 0; i < size; i++) {
         for (int j = 0; j < size; j++) {
