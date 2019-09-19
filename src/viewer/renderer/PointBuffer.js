@@ -138,9 +138,14 @@ export class PointBuffer {
     insertIntoGPUPool(numPoints, memoryAddress, modelMatrix) {
         this.insertShader.use();
 
+        // coordinates of camera in CA13
+        const shiftMatrix = new THREE.Matrix4().makeTranslation(-694991.915,-3916274.373, -76.418);
+        // const shiftMatrix = new THREE.Matrix4().makeTranslation(-1000,-1000, -1000);
+        const shiftedModelMatrix = modelMatrix.clone().multiply(shiftMatrix);
+
         this.insertShader.setUniform1i("denseStartIdx", memoryAddress);
         this.insertShader.setUniform1i("lastIdx", numPoints - 1);
-        this.insertShader.setUniformMatrix4("modelMatrix", modelMatrix);
+        this.insertShader.setUniformMatrix4("modelMatrix", shiftedModelMatrix);
 
         this.positionsSSBO.bind(1);
         this.colorSSBO.bind(2);

@@ -217,6 +217,10 @@ export class ComputePointCloudRenderer {
 
         gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, this.resolutionUBO);
 
+        // coordinates of camera in CA13
+        this.shiftMatrix = new THREE.Matrix4().makeTranslation(694991.915,3916274.373, 76.418);
+        // this.shiftMatrix = new THREE.Matrix4().makeTranslation(1000,1000,1000);
+
         // RENDER
         this.clearImageBuffer(this.pingPong(true));
         this.clearImageBuffer(2);
@@ -251,9 +255,11 @@ export class ComputePointCloudRenderer {
     reprojectLastFrame(camera) {
         this.reprojectShader.use();
 
-        this.reprojectShader.setUniformMatrix4("viewMatrix", camera.matrixWorldInverse);
+        // Shift * Translate * Rotate. Works as long as not scaling is applied to the camera. (hope so)
+        const shiftedViewMatrix =  camera.matrixWorldInverse.clone().multiply(this.shiftMatrix);
+        this.reprojectShader.setUniformMatrix4("viewMatrix", shiftedViewMatrix);
         this.reprojectShader.setUniformMatrix4("projectionMatrix", camera.projectionMatrix);
-        const vp = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+        const vp = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, shiftedViewMatrix);
         this.reprojectShader.setUniformMatrix4("viewProjectionMatrix", vp);
 
         this.gl.bindImageTexture(0, this.renderTexture[this.pingPong(true)].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
@@ -276,9 +282,12 @@ export class ComputePointCloudRenderer {
         this.pointCloudShader.setUniform1i("lastIdx", this.pointBuffer.size);
         this.pointCloudShader.setUniform1i("startIdx", this.startIdx);
         this.pointCloudShader.setUniform1i("renderAmount", renderAmount);
-        this.pointCloudShader.setUniformMatrix4("viewMatrix", camera.matrixWorldInverse);
+
+        // Shift * Translate * Rotate. Works as long as not scaling is applied to the camera. (hope so)
+        const shiftedViewMatrix =  camera.matrixWorldInverse.clone().multiply(this.shiftMatrix);
+        this.pointCloudShader.setUniformMatrix4("viewMatrix", shiftedViewMatrix);
         this.pointCloudShader.setUniformMatrix4("projectionMatrix", camera.projectionMatrix);
-        const vp = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+        const vp = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, shiftedViewMatrix);
         this.pointCloudShader.setUniformMatrix4("viewProjectionMatrix", vp);
 
         // this.pointBuffer.modelMatrixSSBO.bind(0);
@@ -313,7 +322,9 @@ export class ComputePointCloudRenderer {
         // depth pass
         this.depthPassShader.use();
 
-        const vp = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+        // Shift * Translate * Rotate. Works as long as not scaling is applied to the camera. (hope so)
+        const shiftedViewMatrix =  camera.matrixWorldInverse.clone().multiply(this.shiftMatrix);
+        const vp = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, shiftedViewMatrix);
         this.depthPassShader.setUniformMatrix4("viewProjectionMatrix", vp);
 
         this.gl.bindImageTexture(1, this.positionTexture[2].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
@@ -330,9 +341,11 @@ export class ComputePointCloudRenderer {
     resolveBuffer(camera) {
         this.resolveShader.use();
 
-        this.resolveShader.setUniformMatrix4("viewMatrix", camera.matrixWorldInverse);
+        // Shift * Translate * Rotate. Works as long as not scaling is applied to the camera. (hope so)
+        const shiftedViewMatrix =  camera.matrixWorldInverse.clone().multiply(this.shiftMatrix);
+        this.resolveShader.setUniformMatrix4("viewMatrix", shiftedViewMatrix);
         this.resolveShader.setUniformMatrix4("projectionMatrix", camera.projectionMatrix);
-        const vp = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+        const vp = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, shiftedViewMatrix);
         this.resolveShader.setUniformMatrix4("viewProjectionMatrix", vp);
 
         this.gl.bindImageTexture(0, this.renderTexture[2].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
