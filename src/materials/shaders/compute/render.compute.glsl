@@ -24,7 +24,7 @@ layout(binding=7, rgba32f) uniform writeonly image2D positionTexture;
 
 layout(std140, binding=1) buffer PositionBuffer
 {
-    vec4 points[];// xyz = position, w = modelMatrixIndex
+    vec4 points[]; // xyz = position
 };
 
 layout(std140, binding=2) buffer ColorBuffer
@@ -42,6 +42,10 @@ void main() {
     linearIdx = uint(int(linearIdx) % int(lastIdx));
 
     vec4 pointData = points[linearIdx];
+
+    if(pointData == vec4(0)) {
+        return;
+    }
 
 //    mat4 mMatrix = modelMatrices[int(pointData.w)];
     vec4 worldPosition = vec4(pointData.xyz, 1);

@@ -201,6 +201,22 @@ export class ComputePointCloudRenderer {
         this._lastTimeStamp = performance.now();
     }
 
+    shiftOrigin(camera) {
+        if (this.shiftPosition) {
+            const dist =  this.shiftPosition.length() - camera.position.length();
+            if (Math.abs(dist) > 100000) {
+                console.log("Shifting origin");
+                this.clearAll();
+                this.shiftPosition = camera.position.clone();
+            }
+        } else {
+            this.shiftPosition = camera.position.clone();
+        }
+
+        this.shiftMatrix = new THREE.Matrix4().makeTranslation(this.shiftPosition.x, this.shiftPosition.y, this.shiftPosition.z);
+        this.pointBuffer.shiftMatrix = new THREE.Matrix4().makeTranslation(-this.shiftPosition.x, -this.shiftPosition.y, -this.shiftPosition.z);
+    }
+
     render(scene, camera, target = null, params = {}) {
         this._calculateFps();
 
@@ -217,9 +233,7 @@ export class ComputePointCloudRenderer {
 
         gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, this.resolutionUBO);
 
-        // coordinates of camera in CA13
-        this.shiftMatrix = new THREE.Matrix4().makeTranslation(694991.915,3916274.373, 76.418);
-        // this.shiftMatrix = new THREE.Matrix4().makeTranslation(1000,1000,1000);
+        this.shiftOrigin(camera);
 
         // RENDER
         this.clearImageBuffer(this.pingPong(true));

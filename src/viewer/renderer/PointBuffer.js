@@ -25,6 +25,8 @@ export class PointBuffer {
 
         console.log(`Allocated ${this.allocatedStorage()}MB on GPU`);
 
+        this.shiftMatrix = null;
+
         /*
             key: nodeId;
             value: MemoryManagerEntry
@@ -38,6 +40,10 @@ export class PointBuffer {
         this.insertShader = new Shader(this.gl, "InsertComputeShader");
         this.insertShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['insert.compute.glsl']);
         this.insertShader.linkProgram();
+
+        this.clearPoolShader = new Shader(this.gl, "ClearPointPoolShader");
+        this.clearPoolShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['clearpool.compute.glsl']);
+        this.clearPoolShader.linkProgram();
 
         this.initDenseIdxSSBO();
     }
@@ -86,10 +92,9 @@ export class PointBuffer {
     }
 
     clear() {
-        // position pool containing vec4
-        this.positionsSSBO = new SSBO(this.gl, this.size, 4, 4);
-        // color pool containing vec4
-        this.colorSSBO = new SSBO(this.gl, this.size, 4, 4);
+        this.clearPoolShader.use();
+        this.clearPoolShader.setUniform1i('poolSize', this.size);
+        this.gl.dispatchCompute(Math.ceil(this.size / 256), 1, 1);
 
         this.memoryManager = new MemoryManager(this.size);
         this.uploadedNodes.clear();
@@ -138,10 +143,7 @@ export class PointBuffer {
     insertIntoGPUPool(numPoints, memoryAddress, modelMatrix) {
         this.insertShader.use();
 
-        // coordinates of camera in CA13
-        const shiftMatrix = new THREE.Matrix4().makeTranslation(-694991.915,-3916274.373, -76.418);
-        // const shiftMatrix = new THREE.Matrix4().makeTranslation(-1000,-1000, -1000);
-        const shiftedModelMatrix = modelMatrix.clone().multiply(shiftMatrix);
+        const shiftedModelMatrix = modelMatrix.clone().multiply(this.shiftMatrix);
 
         this.insertShader.setUniform1i("denseStartIdx", memoryAddress);
         this.insertShader.setUniform1i("lastIdx", numPoints - 1);
