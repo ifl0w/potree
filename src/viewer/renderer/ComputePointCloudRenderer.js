@@ -20,6 +20,7 @@ export class ComputePointCloudRenderer {
         window.addEventListener('resize', (event) => {
             this.initTextures();
             this.initUBOs();
+            this.initSSBOs();
         });
 
         this._pointSize = 2;
@@ -28,6 +29,8 @@ export class ComputePointCloudRenderer {
 
         this.initTextures();
         this.initUBOs();
+        this.initSSBOs();
+        this.initShader();
 
         this.profiler = new Profiler(this.gl);
         this.profiler.createMarker('cleartextures');
@@ -38,37 +41,6 @@ export class ComputePointCloudRenderer {
         this.profiler.createMarker('display');
 
         this.pointBuffer = new PointBuffer(this.gl, 25 * 1000 * 1000);
-
-        this.pointCloudShader = new Shader(this.gl, "PointCloudComputeShader");
-        this.pointCloudShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['render.compute.glsl']);
-        this.pointCloudShader.linkProgram();
-
-        this.reprojectShader = new Shader(this.gl, "ReprojectComputeShader");
-        this.reprojectShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['reproject.compute.glsl']);
-        this.reprojectShader.linkProgram();
-
-        this.resolveDepthSSBO = new SSBO(this.gl, window.innerWidth * window.innerHeight, 1, 4);
-
-        this.clearDepthShader = new Shader(this.gl, "ClearDepthComputeShader");
-        this.clearDepthShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['cleardepth.compute.glsl']);
-        this.clearDepthShader.linkProgram();
-
-        this.depthPassShader = new Shader(this.gl, "DepthPassComputeShader");
-        this.depthPassShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['depthpass.compute.glsl']);
-        this.depthPassShader.linkProgram();
-
-        this.resolveShader = new Shader(this.gl, "ResolveComputeShader");
-        this.resolveShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['resolve.compute.glsl']);
-        this.resolveShader.linkProgram();
-
-        this.clearShader = new Shader(this.gl, "ClearComputeShader");
-        this.clearShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['clear.compute.glsl']);
-        this.clearShader.linkProgram();
-
-        this.drawQuadShader = new Shader(this.gl, "DrawQuadShader");
-        this.drawQuadShader.addSourceCode(this.gl.VERTEX_SHADER, Shaders['quad.vertex.glsl']);
-        this.drawQuadShader.addSourceCode(this.gl.FRAGMENT_SHADER, Shaders['quad.fragment.glsl']);
-        this.drawQuadShader.linkProgram();
 
         this.quad = new Plane(this.gl, 2, 2);
 
@@ -117,6 +89,41 @@ export class ComputePointCloudRenderer {
         dataViewInt[2] = this._pointSize;
         gl.bufferData(gl.UNIFORM_BUFFER, data, gl.STATIC_READ);
         gl.bindBuffer(gl.UNIFORM_BUFFER, null);
+    }
+
+    initSSBOs() {
+        this.resolveDepthSSBO = new SSBO(this.gl, window.innerWidth * window.innerHeight, 1, 4);
+    }
+
+    initShader() {
+        this.pointCloudShader = new Shader(this.gl, "PointCloudComputeShader");
+        this.pointCloudShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['render.compute.glsl']);
+        this.pointCloudShader.linkProgram();
+
+        this.reprojectShader = new Shader(this.gl, "ReprojectComputeShader");
+        this.reprojectShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['reproject.compute.glsl']);
+        this.reprojectShader.linkProgram();
+
+        this.clearDepthShader = new Shader(this.gl, "ClearDepthComputeShader");
+        this.clearDepthShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['cleardepth.compute.glsl']);
+        this.clearDepthShader.linkProgram();
+
+        this.depthPassShader = new Shader(this.gl, "DepthPassComputeShader");
+        this.depthPassShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['depthpass.compute.glsl']);
+        this.depthPassShader.linkProgram();
+
+        this.resolveShader = new Shader(this.gl, "ResolveComputeShader");
+        this.resolveShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['resolve.compute.glsl']);
+        this.resolveShader.linkProgram();
+
+        this.clearShader = new Shader(this.gl, "ClearComputeShader");
+        this.clearShader.addSourceCode(this.gl.COMPUTE_SHADER, Shaders['clear.compute.glsl']);
+        this.clearShader.linkProgram();
+
+        this.drawQuadShader = new Shader(this.gl, "DrawQuadShader");
+        this.drawQuadShader.addSourceCode(this.gl.VERTEX_SHADER, Shaders['quad.vertex.glsl']);
+        this.drawQuadShader.addSourceCode(this.gl.FRAGMENT_SHADER, Shaders['quad.fragment.glsl']);
+        this.drawQuadShader.linkProgram();
     }
 
     traverse(scene) {
