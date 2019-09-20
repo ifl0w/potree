@@ -49,17 +49,17 @@ void main() {
 
 //    mat4 mMatrix = modelMatrices[int(pointData.w)];
     vec4 worldPosition = vec4(pointData.xyz, 1);
-    vec4 projectedPosition = viewProjectionMatrix * worldPosition;
-
-    // Perspective Divide
-    vec4 ndcPosition = projectedPosition / projectedPosition.w;
+    vec4 clipSpace = viewProjectionMatrix * worldPosition;
 
     // Clipping
-    if (ndcPosition.x > 1.0 || ndcPosition.x < -1.0 ||
-    ndcPosition.y > 1.0 || ndcPosition.y < -1.0 ||
-    ndcPosition.z > 1.0 || ndcPosition.z < 0.0) {
+    if (clipSpace.x > clipSpace.w || clipSpace.x < -clipSpace.w ||
+    clipSpace.y > clipSpace.w || clipSpace.y < -clipSpace.w ||
+    clipSpace.z > clipSpace.w || clipSpace.z < 0.0) {
         return;
     }
+
+    // Perspective Divide
+    vec4 ndcPosition = clipSpace / clipSpace.w;
 
     // screenspace
     ivec2 storePos = ivec2((ndcPosition.xy * vec2(0.5) + vec2(0.5)) * resolution);

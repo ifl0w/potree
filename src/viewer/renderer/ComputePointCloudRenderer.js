@@ -336,8 +336,8 @@ export class ComputePointCloudRenderer {
 
         // Shift * Translate * Rotate. Works as long as not scaling is applied to the camera. (hope so)
         const shiftedViewMatrix =  camera.matrixWorldInverse.clone().multiply(this.shiftMatrix);
-        this.pointCloudShader.setUniformMatrix4("viewMatrix", shiftedViewMatrix);
-        this.pointCloudShader.setUniformMatrix4("projectionMatrix", camera.projectionMatrix);
+        // this.pointCloudShader.setUniformMatrix4("viewMatrix", shiftedViewMatrix);
+        // this.pointCloudShader.setUniformMatrix4("projectionMatrix", camera.projectionMatrix);
         const vp = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, shiftedViewMatrix);
         this.pointCloudShader.setUniformMatrix4("viewProjectionMatrix", vp);
 
