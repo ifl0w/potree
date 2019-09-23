@@ -33,6 +33,11 @@ class Query {
     }
 
     stop() {
+        if (this.finished) {
+            // nothing to do
+            return;
+        }
+
         if (this.useTimestamps) {
             this.ext.queryCounterEXT(entry.queries[1], this.ext.TIMESTAMP_EXT);
         } else {
@@ -81,9 +86,44 @@ class Query {
 }
 
 class Marker {
-    constructor(name, timespan) {
+    constructor(name) {
         this.name = name;
         this.queries = [];
+
+        this.reset();
+    }
+
+    resolveQueries() {
+        this.queries.forEach(q => q.stop());
+
+        this.queries.forEach((q, i) => {
+            let result = q.result();
+            if (result !== null) {
+                this.sum += result;
+                this.measurements++;
+                this.min = Math.min(this.min, result);
+                this.max = Math.max(this.max, result);
+                this.queries.splice(i, 1);
+            }
+        });
+    }
+
+    reset() {
+        this.min = Infinity; // minimum value of current queries
+        this.max = -Infinity; // maximum value of current queries
+        this.sum = 0; // sum of the finished query timings
+        this.measurements = 0;
+        this.lastCollect = performance.now(); // timestamp of last collect
+    }
+
+    collect() {
+        const avg = this.sum / this.measurements;
+        const result = {
+            avg: (avg / 1e6).toFixed(2),
+            min: (this.min / 1e6).toFixed(2),
+            max: (this.max / 1e6).toFixed(2) };
+        this.reset();
+        return result;
     }
 }
 
@@ -101,43 +141,31 @@ export class Profiler {
         gl.getParameter(this.ext.GPU_DISJOINT_EXT);
     }
 
-    createMarker(name) {
-        this.marker.set(name, {
-            sum: 0,
-            queries: []
-        });
+    create(name) {
+        this.marker.set(name, new Marker(name));
     }
 
-    dispatchMarker(name) {
+    start(name) {
         const marker = this.marker.get(name);
         marker.queries.push(new Query(this.gl, this.ext));
     }
 
-    tagMarker(name) {
+    stop(name) {
         const marker = this.marker.get(name);
-        const latestQuery = marker.queries[marker.queries.length - 1];
-        latestQuery.stop();
+        marker.resolveQueries();
     }
 
-    collectMarker(name) {
-        this.tagMarker(name);
-
+    collectResults(name) {
         const marker = this.marker.get(name);
+        return marker.collect();
+    }
 
-        marker.queries.forEach((q, i) => {
-            let result = q.result();
-
-            if (result !== null) {
-                marker.sum += result;
-                marker.queries.splice(i, 1);
-            }
+    collectAll() {
+        const result = {};
+        this.marker.forEach((v, k) => {
+            result[k] = v.collect();
         });
-    }
 
-    getMarkerResult(name, seconds = 1) {
-        const marker = this.marker.get(name);
-        const result = marker.sum / (1e6 * seconds * 60);
-        marker.sum = 0;
         return result;
     }
 

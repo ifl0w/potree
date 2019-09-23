@@ -22,6 +22,7 @@ new Vue({
         fps: 60,
         memoryUtilization: 60,
         numUploadedNodes: 0,
+        profilingResults: {},
     },
     mounted() {
         window.viewer.setPointBudget(this.pointBudget);
@@ -34,6 +35,7 @@ new Vue({
             this.fps = window.viewer.pRenderer.getFPS();
             this.memoryUtilization = window.viewer.pRenderer.getMemoryUtilization();
             this.numUploadedNodes = window.viewer.pRenderer.numNodesUploaded;
+            this.profilingResults = window.viewer.pRenderer.profilingResults;
         }, (1 / this.refreshRate) * 1000);
 
         this.updatePointBudget();
@@ -110,27 +112,18 @@ new Vue({
                                     <v-list-item-subtitle>Number of frames per second</v-list-item-subtitle>
                                 </v-list-item-content>
                             </v-list-item>
-
-                            <v-list-item two-line>
-                                <v-list-item-content>
-                                    <v-list-item-title>-</v-list-item-title>
-                                    <v-list-item-subtitle>Time needed for re-projection</v-list-item-subtitle>
-                                </v-list-item-content>
-                            </v-list-item>
-
-                            <v-list-item two-line>
-                                <v-list-item-content>
-                                    <v-list-item-title>-</v-list-item-title>
-                                    <v-list-item-subtitle>Time needed for rendering new points</v-list-item-subtitle>
-                                </v-list-item-content>
-                            </v-list-item>
-
-                            <v-list-item two-line>
-                                <v-list-item-content>
-                                    <v-list-item-title>-</v-list-item-title>
-                                    <v-list-item-subtitle>Time needed for combining the results</v-list-item-subtitle>
-                                </v-list-item-content>
-                            </v-list-item>
+                            
+                            <v-expansion-panels>
+                                <v-expansion-panel
+                                        v-for="(v,k) in profilingResults"
+                                        :key="k"
+                                >
+                                    <v-expansion-panel-header>{{k}} - Avg: {{v.avg}}ms - Min: {{v.min}}ms - Max: {{v.max}}ms</v-expansion-panel-header>
+                                    <v-expansion-panel-content>
+                                    </v-expansion-panel-content>
+                                </v-expansion-panel>
+                            </v-expansion-panels>
+                            
                         </v-card>
                     </v-col>
 

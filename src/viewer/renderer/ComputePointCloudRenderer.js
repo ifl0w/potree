@@ -33,12 +33,13 @@ export class ComputePointCloudRenderer {
         this.initShader();
 
         this.profiler = new Profiler(this.gl);
-        this.profiler.createMarker('cleartextures');
-        this.profiler.createMarker('reprojection');
-        this.profiler.createMarker('rendernew');
-        this.profiler.createMarker('cleardepth');
-        this.profiler.createMarker('combine');
-        this.profiler.createMarker('display');
+        this.profiler.create('cleartextures');
+        this.profiler.create('reprojection');
+        this.profiler.create('rendernew');
+        this.profiler.create('cleardepth');
+        this.profiler.create('combine');
+        this.profiler.create('display');
+        this.profilingResults = {};
 
         this.pointBuffer = new PointBuffer(this.gl, 25 * 1000 * 1000);
 
@@ -212,12 +213,7 @@ export class ComputePointCloudRenderer {
                 this._timePassed = 0;
                 this._fpsSum = 0;
 
-                console.log('cleartextures', this.profiler.getMarkerResult('cleartextures'));
-                console.log('reprojection', this.profiler.getMarkerResult('reprojection'));
-                console.log('rendernew', this.profiler.getMarkerResult('rendernew'));
-                console.log('cleardepth', this.profiler.getMarkerResult('cleardepth'));
-                console.log('combine', this.profiler.getMarkerResult('combine'));
-                console.log('display', this.profiler.getMarkerResult('display'));
+                this.profilingResults = this.profiler.collectAll();
             }
         }
 
@@ -259,18 +255,18 @@ export class ComputePointCloudRenderer {
         this.shiftOrigin(camera);
 
         // RENDER
-        this.profiler.dispatchMarker('cleartextures');
+        this.profiler.start('cleartextures');
         this.clearImageBuffer(this.pingPong(true));
         this.clearImageBuffer(2);
-        this.profiler.collectMarker('cleartextures');
+        this.profiler.stop('cleartextures');
 
-        this.profiler.dispatchMarker('reprojection');
+        this.profiler.start('reprojection');
         this.reprojectLastFrame(camera);
-        this.profiler.collectMarker('reprojection');
+        this.profiler.stop('reprojection');
 
-        this.profiler.dispatchMarker('cleartextures');
+        this.profiler.start('cleartextures');
         this.clearImageBuffer(this.pingPong(false));
-        this.profiler.collectMarker('cleartextures');
+        this.profiler.stop('cleartextures');
         // this.swapImageBuffer();
 
         for (const octree of traversalResult.octrees) {
@@ -278,22 +274,22 @@ export class ComputePointCloudRenderer {
             this.renderOctree(octree, nodes, camera, target, params);
         }
 
-        this.profiler.dispatchMarker('rendernew');
+        this.profiler.start('rendernew');
         this.renderPoints(camera);
-        this.profiler.collectMarker('rendernew');
+        this.profiler.stop('rendernew');
         this.pointBuffer.finishFrame();
 
-        this.profiler.dispatchMarker('cleardepth');
+        this.profiler.start('cleardepth');
         this.depthPass(camera);
-        this.profiler.collectMarker('cleardepth');
+        this.profiler.stop('cleardepth');
 
-        this.profiler.dispatchMarker('combine');
+        this.profiler.start('combine');
         this.resolveBuffer(camera);
-        this.profiler.collectMarker('combine');
+        this.profiler.stop('combine');
 
-        this.profiler.dispatchMarker('display');
+        this.profiler.start('display');
         this.displayResult();
-        this.profiler.collectMarker('display');
+        this.profiler.stop('display');
         // this.swapImageBuffer();
 
         // CLEANUP
