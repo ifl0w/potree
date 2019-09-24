@@ -1,12 +1,9 @@
 #version 310 es
 
-precision mediump image2D;
-precision mediump float;
+precision highp image2D;
+precision highp float;
+precision highp int;
 
-uniform mat4 viewMatrix;
-uniform mat4 modelMatrix;
-uniform mat4 modelViewMatrix;
-uniform mat4 projectionMatrix;
 uniform mat4 viewProjectionMatrix;
 
 uniform int lastIdx;
@@ -19,17 +16,12 @@ layout(std140, binding = 0) uniform screenData
     int pointSize;
 };
 
-layout(binding=6, rgba32f) uniform writeonly image2D colorTexture;
-layout(binding=7, rgba32f) uniform writeonly image2D positionTexture;
+layout(binding=6, rgba32f) uniform writeonly image2D targetTexture;
+//layout(binding=7, rgba32f) uniform writeonly image2D positionTexture;
 
 layout(std140, binding=1) buffer PositionBuffer
 {
     vec4 points[]; // xyz = position
-};
-
-layout(std140, binding=2) buffer ColorBuffer
-{
-    vec4 colors[];
 };
 
 layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
@@ -64,10 +56,10 @@ void main() {
     // screenspace
     ivec2 storePos = ivec2((ndcPosition.xy * vec2(0.5) + vec2(0.5)) * resolution);
 
-    vec4 pointColor = colors[linearIdx];
+    vec4 data = vec4(worldPosition.xyz, pointData.w);
 
-    imageStore(positionTexture, storePos, worldPosition);
-    imageStore(colorTexture, storePos, pointColor);
+    imageStore(targetTexture, storePos, data);
+    //imageStore(colorTexture, storePos, pointColor);
 
 //    int size = 1;
 //    for (int i = 0; i < size; i++) {

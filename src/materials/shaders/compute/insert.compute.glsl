@@ -1,6 +1,7 @@
 #version 310 es
 
-precision mediump float;
+precision highp float;
+precision highp int;
 
 uniform int lastIdx;
 uniform int denseStartIdx;
@@ -11,11 +12,6 @@ layout(std140, binding=1) buffer PersistentPositionBuffer
     vec4 points[];// xyz = position, w = modelMatrixIndex
 };
 
-layout(std140, binding=2) buffer PersistentColorBuffer
-{
-    vec4 colors[];
-};
-
 layout(std140, binding=3) buffer NewPositionBuffer
 {
     vec4 newPositions[];// pattern: [xyzx][yzxy][zxyz]
@@ -23,7 +19,7 @@ layout(std140, binding=3) buffer NewPositionBuffer
 
 layout(std140, binding=4) buffer NewColorBuffer
 {
-    ivec4 newColors[];
+    uvec4 newColors[];
 };
 
 layout(std140, binding=5) buffer DenseIndexBuffer
@@ -33,7 +29,7 @@ layout(std140, binding=5) buffer DenseIndexBuffer
 
 
 layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
-
+/*
 vec4 unpackRGBA(int index) {
     ivec4 packedColor = newColors[index >> 2];
 
@@ -52,6 +48,20 @@ vec4 unpackRGBA(int index) {
     c.a = float((tmp & 0xFF000000) >> 24) / 255.0;
 
     return c;
+}*/
+
+float getColorBits(int index) {
+    uvec4 packedColor = newColors[index >> 2];
+
+    int r = index % 4;
+    uint tmp = packedColor.r;
+
+    if (r == 0) { tmp = packedColor.r; }
+    if (r == 1) { tmp = packedColor.g; }
+    if (r == 2) { tmp = packedColor.b; }
+    if (r == 3) { tmp = packedColor.a; }
+
+    return uintBitsToFloat(tmp);
 }
 
 vec4 unpackPosition(int index) {
@@ -93,9 +103,8 @@ void main() {
 
     uint storeIdx = indices[denseIdx];
 
-    vec4 position = unpackPosition(int(linearIdx));
-    vec4 color = unpackRGBA(int(linearIdx));
+    vec4 data = vec4(unpackPosition(int(linearIdx)).xyz, getColorBits(int(linearIdx)));
 
-    points[storeIdx] = position;
-    colors[storeIdx] = color;
+    points[storeIdx] = data;
+    //colors[storeIdx] = color;
 }

@@ -4,14 +4,7 @@ precision highp image2D;
 precision highp float;
 precision highp int;
 
-uniform mat4 viewMatrix;
-uniform mat4 modelMatrix;
-uniform mat4 modelViewMatrix;
-uniform mat4 projectionMatrix;
 uniform mat4 viewProjectionMatrix;
-
-uniform mat4 lastFrameViewMatrix;
-uniform mat4 lastFrameProjectionMatrix;
 
 uniform int lastIdx;
 
@@ -21,14 +14,14 @@ layout(std140, binding = 0) uniform screenData
     int pointSize;
 };
 
-layout(binding=0, rgba32f) uniform readonly image2D newColorTexture;
-layout(binding=1, rgba32f) uniform readonly image2D newPositionTexture;
+layout(binding=0, rgba32f) uniform readonly image2D newPointsTexture;
+//layout(binding=1, rgba32f) uniform readonly image2D newPositionTexture;
 
-layout(binding=2, rgba32f) uniform readonly image2D reprojectedColorTexture;
-layout(binding=3, rgba32f) uniform readonly image2D reprojectedPositionTexture;
+layout(binding=2, rgba32f) uniform readonly image2D reprojectedPointsTexture;
+//layout(binding=3, rgba32f) uniform readonly image2D reprojectedPositionTexture;
 
-layout(binding=4, rgba32f) uniform writeonly image2D targetColorTexture;
-layout(binding=5, rgba32f) uniform writeonly image2D targetPositionTexture;
+layout(binding=4, rgba32f) uniform writeonly image2D targetTexture;
+//layout(binding=5, rgba32f) uniform writeonly image2D targetPositionTexture;
 
 layout(std430, binding = 6) buffer depthData
 {
@@ -38,7 +31,7 @@ layout(std430, binding = 6) buffer depthData
 
 layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
-void store(vec4 color, vec4 position) {
+void store(vec4 data, vec4 position) {
     ivec2 storePos = ivec2(gl_GlobalInvocationID.xy);
 
     vec4 p = viewProjectionMatrix * position;
@@ -59,8 +52,7 @@ void store(vec4 color, vec4 position) {
                 continue;
             }
 
-            imageStore(targetColorTexture, tmpPos, color);
-            imageStore(targetPositionTexture, tmpPos, position);
+            imageStore(targetTexture, tmpPos, data);
         }
     }
 }
@@ -69,23 +61,24 @@ void main() {
 //    mat4 viewProjectionMatrix = projectionMatrix * viewMatrix;
     ivec2 storePos = ivec2(gl_GlobalInvocationID.xy);
 
-    vec4 reprojectedColor = imageLoad(reprojectedColorTexture, storePos);
-    vec4 reprojectedPos = imageLoad(reprojectedPositionTexture, storePos);
+    //vec4 reprojectedColor = imageLoad(reprojectedColorTexture, storePos);
+    vec4 reprojectedData = imageLoad(reprojectedPointsTexture, storePos);
+    vec4 reprojectedPos = vec4(reprojectedData.xyz, 1);
 
-    vec4 newColor = imageLoad(newColorTexture, storePos);
-    vec4 newPos = imageLoad(newPositionTexture, storePos);
+    vec4 newData = imageLoad(newPointsTexture, storePos);
+    vec4 newPos = vec4(newData.xyz, 1);
 
-    if(newColor == vec4(0) && reprojectedColor == vec4(0)) {
+    if(newData == vec4(0) && reprojectedData == vec4(0)) {
         return;
     }
 
-    if (newColor != vec4(0)) {
-        store(newColor, newPos);
+    if (newData != vec4(0)) {
+        store(newData, newPos);
 //        return;
     }
 
-    if (reprojectedColor != vec4(0)) {
-        store(reprojectedColor, reprojectedPos);
+    if (reprojectedData != vec4(0)) {
+        store(reprojectedData, reprojectedPos);
 //        return;
     }
 

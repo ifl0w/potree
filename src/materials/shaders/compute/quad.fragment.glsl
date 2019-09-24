@@ -1,26 +1,30 @@
 #version 310 es
 
-precision mediump image2D;
-precision mediump float;
+precision highp image2D;
+precision highp float;
+precision highp int;
 
 out vec4 fragColor;
 
 in vec2 textureCoords;
 
-//layout(binding = 0, rgba32f) uniform readonly image2D renderTexture;
-//layout(binding = 1, rgba32f) uniform readonly image2D newPointsTexture;
+layout(binding = 0) uniform sampler2D dataTexture;
 
-layout(binding = 0) uniform sampler2D renderTexture;
-//layout(binding = 1) uniform sampler2D newPointsTexture;
+vec4 unpackRGBA(float colorBits) {
+    uint tmp = floatBitsToUint(colorBits);
+
+    vec4 c = vec4(0);
+    c.r = float((tmp & uint(0x000000FF))) / 255.0;
+    c.g = float((tmp & uint(0x0000FF00)) >> 8) / 255.0;
+    c.b = float((tmp & uint(0x00FF0000)) >> 16) / 255.0;
+    c.a = float((tmp & uint(0xFF000000)) >> 24) / 255.0;
+
+    // return unpackUnorm4x8(tmp);
+    return c;
+}
 
 void main()
 {
-    //    ivec2 accesLocation = ivec2(textureCoords * vec2(1000));
-    //    if (imageLoad(newPointsTexture, accesLocation) != vec4(0)) {
-    //        fragColor = imageLoad(newPointsTexture, accesLocation);
-    //        fragColor = vec4(1,0,0,1);
-    //        return;
-    //    }
-
-    fragColor = texture(renderTexture, textureCoords);
+    vec4 data = texture(dataTexture, textureCoords);
+    fragColor = unpackRGBA(data.w);
 }

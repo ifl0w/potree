@@ -20,8 +20,6 @@ export class PointBuffer {
         this.streamColorSSBO = new SSBO(gl, streamSize, 4, 4);
         // position pool containing vec4
         this.positionsSSBO = new SSBO(gl, size, 4, 4);
-        // color pool containing vec4
-        this.colorSSBO = new SSBO(gl, size, 4, 4);
 
         console.log(`Allocated ${this.allocatedStorage()}MB on GPU`);
 
@@ -50,7 +48,6 @@ export class PointBuffer {
 
     allocatedStorage() {
         let poolSize = this.positionsSSBO.byteSize()
-            + this.colorSSBO.byteSize()
             + this.streamPositionsSSBO.byteSize()
             + this.streamColorSSBO.byteSize()
             + this.denseIdxSSBO.byteSize();
@@ -150,7 +147,6 @@ export class PointBuffer {
         this.insertShader.setUniformMatrix4("modelMatrix", shiftedModelMatrix);
 
         this.positionsSSBO.bind(1);
-        this.colorSSBO.bind(2);
         this.streamPositionsSSBO.bind(3);
         this.streamColorSSBO.bind(4);
         this.denseIdxSSBO.bind(5);

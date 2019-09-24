@@ -60,12 +60,7 @@ export class ComputePointCloudRenderer {
     }
 
     initTextures() {
-        this.renderTexture = [
-            new Texture(this.gl, window.innerWidth, window.innerHeight, true),
-            new Texture(this.gl, window.innerWidth, window.innerHeight, true),
-            new Texture(this.gl, window.innerWidth, window.innerHeight, true),
-        ];
-        this.positionTexture = [
+        this.storageTexture = [
             new Texture(this.gl, window.innerWidth, window.innerHeight, true),
             new Texture(this.gl, window.innerWidth, window.innerHeight, true),
             new Texture(this.gl, window.innerWidth, window.innerHeight, true),
@@ -82,6 +77,7 @@ export class ComputePointCloudRenderer {
         }
 
         gl.bindBuffer(gl.UNIFORM_BUFFER, this.resolutionUBO);
+        gl.bindBufferBase(this.gl.UNIFORM_BUFFER, 0, this.resolutionUBO);
         const data = new ArrayBuffer(3*4);
         const dataViewFloat = new Float32Array(data);
         const dataViewInt = new Int32Array(data);
@@ -304,19 +300,15 @@ export class ComputePointCloudRenderer {
 
         // Shift * Translate * Rotate. Works as long as not scaling is applied to the camera. (hope so)
         const shiftedViewMatrix =  camera.matrixWorldInverse.clone().multiply(this.shiftMatrix);
-        this.reprojectShader.setUniformMatrix4("viewMatrix", shiftedViewMatrix);
-        this.reprojectShader.setUniformMatrix4("projectionMatrix", camera.projectionMatrix);
         const vp = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, shiftedViewMatrix);
         this.reprojectShader.setUniformMatrix4("viewProjectionMatrix", vp);
 
-        this.gl.bindImageTexture(0, this.renderTexture[this.pingPong(true)].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
-        this.gl.bindImageTexture(1, this.positionTexture[this.pingPong(true)].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
-        this.gl.bindImageTexture(2, this.renderTexture[this.pingPong(false)].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
-        this.gl.bindImageTexture(3, this.positionTexture[this.pingPong(false)].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
+        this.gl.bindImageTexture(0, this.storageTexture[this.pingPong(true)].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
+        this.gl.bindImageTexture(2, this.storageTexture[this.pingPong(false)].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
 
         this.gl.dispatchCompute(
-            Math.ceil(this.renderTexture[this.pingPong(false)].width / 16),
-            Math.ceil(this.renderTexture[this.pingPong(false)].height / 16),
+            Math.ceil(this.storageTexture[this.pingPong(false)].width / 16),
+            Math.ceil(this.storageTexture[this.pingPong(false)].height / 16),
             1);
     }
 
@@ -332,22 +324,14 @@ export class ComputePointCloudRenderer {
 
         // Shift * Translate * Rotate. Works as long as not scaling is applied to the camera. (hope so)
         const shiftedViewMatrix =  camera.matrixWorldInverse.clone().multiply(this.shiftMatrix);
-        // this.pointCloudShader.setUniformMatrix4("viewMatrix", shiftedViewMatrix);
-        // this.pointCloudShader.setUniformMatrix4("projectionMatrix", camera.projectionMatrix);
         const vp = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, shiftedViewMatrix);
         this.pointCloudShader.setUniformMatrix4("viewProjectionMatrix", vp);
 
-        // this.pointBuffer.modelMatrixSSBO.bind(0);
         this.pointBuffer.positionsSSBO.bind(1);
-        this.pointBuffer.colorSSBO.bind(2);
 
-        this.gl.bindImageTexture(6, this.renderTexture[2].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
-        this.gl.bindImageTexture(7, this.positionTexture[2].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
+        this.gl.bindImageTexture(6, this.storageTexture[2].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
 
         this.gl.dispatchCompute(Math.ceil(renderAmount / 256), 1, 1);
-
-        this.lastFrameViewMatrix = camera.matrixWorldInverse;
-        this.lastFrameProjectionMatrix = camera.projectionMatrix;
 
         this.startIdx += renderAmount;
         if (this.startIdx >= this.pointBuffer.size) {
@@ -361,8 +345,8 @@ export class ComputePointCloudRenderer {
 
         this.resolveDepthSSBO.bind(6);
 
-        const numPixels = this.renderTexture[this.pingPong(false)].width
-            * this.renderTexture[this.pingPong(false)].height;
+        const numPixels = this.storageTexture[this.pingPong(false)].width
+            * this.storageTexture[this.pingPong(false)].height;
 
         this.gl.dispatchCompute(Math.ceil( numPixels / 256), 1, 1);
 
@@ -374,14 +358,14 @@ export class ComputePointCloudRenderer {
         const vp = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, shiftedViewMatrix);
         this.depthPassShader.setUniformMatrix4("viewProjectionMatrix", vp);
 
-        this.gl.bindImageTexture(1, this.positionTexture[2].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
-        this.gl.bindImageTexture(3, this.positionTexture[this.pingPong(true)].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
+        this.gl.bindImageTexture(1, this.storageTexture[2].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
+        this.gl.bindImageTexture(3, this.storageTexture[this.pingPong(true)].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
 
         this.resolveDepthSSBO.bind(6);
 
         this.gl.dispatchCompute(
-            Math.ceil(this.renderTexture[this.pingPong(false)].width / 16),
-            Math.ceil(this.renderTexture[this.pingPong(false)].height / 16),
+            Math.ceil(this.storageTexture[this.pingPong(false)].width / 16),
+            Math.ceil(this.storageTexture[this.pingPong(false)].height / 16),
             1);
     }
 
@@ -390,25 +374,18 @@ export class ComputePointCloudRenderer {
 
         // Shift * Translate * Rotate. Works as long as not scaling is applied to the camera. (hope so)
         const shiftedViewMatrix =  camera.matrixWorldInverse.clone().multiply(this.shiftMatrix);
-        this.resolveShader.setUniformMatrix4("viewMatrix", shiftedViewMatrix);
-        this.resolveShader.setUniformMatrix4("projectionMatrix", camera.projectionMatrix);
         const vp = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, shiftedViewMatrix);
         this.resolveShader.setUniformMatrix4("viewProjectionMatrix", vp);
 
-        this.gl.bindImageTexture(0, this.renderTexture[2].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
-        this.gl.bindImageTexture(1, this.positionTexture[2].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
-
-        this.gl.bindImageTexture(2, this.renderTexture[this.pingPong(true)].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
-        this.gl.bindImageTexture(3, this.positionTexture[this.pingPong(true)].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
-
-        this.gl.bindImageTexture(4, this.renderTexture[this.pingPong(false)].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
-        this.gl.bindImageTexture(5, this.positionTexture[this.pingPong(false)].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
+        this.gl.bindImageTexture(0, this.storageTexture[2].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
+        this.gl.bindImageTexture(2, this.storageTexture[this.pingPong(true)].texture, 0, false, 0, this.gl.READ_ONLY, this.gl.RGBA32F);
+        this.gl.bindImageTexture(4, this.storageTexture[this.pingPong(false)].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
 
         this.resolveDepthSSBO.bind(6);
 
         this.gl.dispatchCompute(
-            Math.ceil(this.renderTexture[this.pingPong(false)].width / 16),
-            Math.ceil(this.renderTexture[this.pingPong(false)].height / 16),
+            Math.ceil(this.storageTexture[this.pingPong(false)].width / 16),
+            Math.ceil(this.storageTexture[this.pingPong(false)].height / 16),
             1);
     }
 
@@ -419,8 +396,7 @@ export class ComputePointCloudRenderer {
         // Draw full screen quad
         this.drawQuadShader.use();
 
-        this.renderTexture[this.pingPong(false)].bind(0);
-        this.drawQuadShader.setUniformTexture('renderTexture', this.renderTexture[this.pingPong(false)].texture);
+        this.storageTexture[this.pingPong(false)].bind(0);
 
         this.gl.bindVertexArray(this.quad.vao);
         this.gl.drawElements(this.gl.TRIANGLES, 6, this.gl.UNSIGNED_SHORT, 0);
@@ -435,12 +411,11 @@ export class ComputePointCloudRenderer {
          */
         this.clearShader.use();
 
-        this.gl.bindImageTexture(0, this.renderTexture[idx].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
-        this.gl.bindImageTexture(1, this.positionTexture[idx].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
+        this.gl.bindImageTexture(0, this.storageTexture[idx].texture, 0, false, 0, this.gl.WRITE_ONLY, this.gl.RGBA32F);
 
         this.gl.dispatchCompute(
-            Math.ceil(this.renderTexture[idx].width / 16),
-            Math.ceil(this.renderTexture[idx].height / 16),
+            Math.ceil(this.storageTexture[idx].width / 16),
+            Math.ceil(this.storageTexture[idx].height / 16),
             1);
     }
 

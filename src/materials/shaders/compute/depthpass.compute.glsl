@@ -2,11 +2,9 @@
 
 precision highp image2D;
 precision highp float;
+precision highp int;
 
 uniform mat4 viewProjectionMatrix;
-
-uniform mat4 lastFrameViewMatrix;
-uniform mat4 lastFrameProjectionMatrix;
 
 uniform int lastIdx;
 
@@ -16,8 +14,8 @@ layout(std140, binding = 0) uniform screenData
     int pointSize;
 };
 
-layout(binding=1, rgba32f) uniform readonly image2D newPositionTexture;
-layout(binding=3, rgba32f) uniform readonly image2D reprojectedPositionTexture;
+layout(binding=1, rgba32f) uniform readonly image2D newTexture;
+layout(binding=3, rgba32f) uniform readonly image2D reprojectedTexture;
 
 // using shader storage buffer since imageAtomicMin does not work.
 layout(std430, binding = 6) buffer depthData
@@ -27,8 +25,10 @@ layout(std430, binding = 6) buffer depthData
 
 layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
-void store(vec4 position) {
+void store(vec4 data) {
     ivec2 storePos = ivec2(gl_GlobalInvocationID.xy);
+
+    vec4 position = vec4(data.xyz, 1);
 
     vec4 p = viewProjectionMatrix * position;
     float d = p.z / p.w;
@@ -56,13 +56,13 @@ void main() {
     //    mat4 viewProjectionMatrix = projectionMatrix * viewMatrix;
     ivec2 storePos = ivec2(gl_GlobalInvocationID.xy);
 
-    vec4 newPos = imageLoad(newPositionTexture, storePos);
-    if (newPos != vec4(0)) {
-        store(newPos);
+    vec4 newData = imageLoad(newTexture, storePos);
+    if (newData != vec4(0)) {
+        store(newData);
     }
 
-    vec4 reprojectedPos = imageLoad(reprojectedPositionTexture, storePos);
-    if (reprojectedPos != vec4(0)) {
-        store(reprojectedPos);
+    vec4 reprojectedData = imageLoad(reprojectedTexture, storePos);
+    if (reprojectedData != vec4(0)) {
+        store(reprojectedData);
     }
 }
