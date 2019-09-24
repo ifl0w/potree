@@ -83,6 +83,10 @@ class Query {
         return timeElapsed;
 
     }
+
+    delete() {
+        this.queries.forEach(q => this.gl.deleteQuery(q));
+    }
 }
 
 class Marker {
@@ -103,6 +107,7 @@ class Marker {
                 this.measurements++;
                 this.min = Math.min(this.min, result);
                 this.max = Math.max(this.max, result);
+                q.delete();
                 this.queries.splice(i, 1);
             }
         });
@@ -129,7 +134,7 @@ class Marker {
 
 export class Profiler {
 
-    constructor(gl, reportTimeSpan = 1000) {
+    constructor(gl) {
         this.gl = gl;
 
         this.marker = new Map();
