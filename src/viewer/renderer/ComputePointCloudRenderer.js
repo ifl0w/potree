@@ -3,7 +3,6 @@ import {PointCloudTree} from "../../PointCloudTree.js";
 import {Shader} from "./Shader";
 import {Shaders} from "../../../build/shaders/shaders";
 import {Texture} from "./Texture";
-import {DepthTexture} from "./DepthTexture";
 import {Plane} from "./meshes/Plane";
 import {PointBuffer} from "./PointBuffer";
 import {SSBO} from "./SSBO";
@@ -37,7 +36,7 @@ export class ComputePointCloudRenderer {
         this.profiler.create('reprojection');
         this.profiler.create('uploadnodes');
         this.profiler.create('rendernew');
-        this.profiler.create('cleardepth');
+        this.profiler.create('depthpass');
         this.profiler.create('combine');
         this.profiler.create('display');
         this.profilingResults = {};
@@ -79,7 +78,7 @@ export class ComputePointCloudRenderer {
 
         gl.bindBuffer(gl.UNIFORM_BUFFER, this.resolutionUBO);
         gl.bindBufferBase(this.gl.UNIFORM_BUFFER, 0, this.resolutionUBO);
-        const data = new ArrayBuffer(3*4);
+        const data = new ArrayBuffer(3 * 4);
         const dataViewFloat = new Float32Array(data);
         const dataViewInt = new Int32Array(data);
         dataViewFloat[0] = window.innerWidth;
@@ -150,7 +149,7 @@ export class ComputePointCloudRenderer {
         return result;
     }
 
-    renderNodes(octree, nodes, visibilityTextureData, camera, target, shader, params) {
+    renderNodes(nodes) {
         if (exports.measureTimings) performance.mark("renderNodes-start");
 
         const maxNodes = Math.min(this.maxNodesPerFrame, nodes.length);
@@ -158,40 +157,25 @@ export class ComputePointCloudRenderer {
         let numTotalPoints = nodes.map(n => n.getNumPoints()).reduce((a, b) => a + b, 0);
         let numPointsPerNode = Math.floor(this.pointBuffer.size / maxNodes);
 
-        let i = 0;
-        for (let node of nodes) {
+        let requiredNodes = nodes.filter(n => this.pointBuffer.require(n));
+        let uploadNodes = requiredNodes;
 
-            if (this.pointBuffer.require(node)) {
+        if (this.maxNodesPerFrame > 0) { // max nodes enabled
+            uploadNodes = [];
 
-                // randomly choose nodes to upload
-                if(this.maxNodesPerFrame > 0) { // max nodes enabled
-                    if(i >= maxNodes) {
-                        continue;
-                    }
-
-                    let render = Math.random() * nodes.length < maxNodes;
-                    if (!render) continue;
-                }
-
-                this.pointBuffer.uploadNode(node);
-
-                i++;
+            // randomly choose nodes to upload
+            while (uploadNodes.length < maxNodes && requiredNodes.length > 0) {
+                const rndIdx = Math.floor(Math.random() * requiredNodes.length);
+                uploadNodes.push(requiredNodes[rndIdx]);
+                requiredNodes.splice(rndIdx, 1);
             }
-
         }
 
-        if (exports.measureTimings) {
-            performance.mark("renderNodes-end");
-            performance.measure("render.renderNodes", "renderNodes-start", "renderNodes-end");
+
+        for (let node of uploadNodes) {
+            this.pointBuffer.uploadNode(node);
         }
-    }
 
-    renderOctree(octree, nodes, camera, target, params = {}) {
-        let visibilityTextureData = null;
-
-        this.pointCloudShader.use();
-
-        this.renderNodes(octree, nodes, visibilityTextureData, camera, target, this.pointCloudShader, params);
     }
 
     _calculateFps() {
@@ -211,7 +195,6 @@ export class ComputePointCloudRenderer {
                 this._fpsSum = 0;
 
                 this.profilingResults = this.profiler.collectAll();
-                console.log(this.profilingResults);
             }
         }
 
@@ -220,7 +203,7 @@ export class ComputePointCloudRenderer {
 
     shiftOrigin(camera) {
         if (this.shiftPosition) {
-            const dist =  this.shiftPosition.length() - camera.position.length();
+            const dist = this.shiftPosition.length() - camera.position.length();
             if (Math.abs(dist) > 100000) {
                 console.log("Shifting origin");
                 this.clearAll();
@@ -239,18 +222,21 @@ export class ComputePointCloudRenderer {
 
         const gl = this.gl;
 
-        // PREPARE
-        if (target != null) {
-            this.threeRenderer.setRenderTarget(target);
-        }
-
-        camera.updateProjectionMatrix();
-
-        const traversalResult = this.traverse(scene);
-
+        // camera.updateProjectionMatrix();
         gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, this.resolutionUBO);
 
         this.shiftOrigin(camera);
+
+        this.profiler.start('uploadnodes');
+        const traversalResult = this.traverse(scene);
+
+        for (const octree of traversalResult.octrees) {
+            let nodes = octree.visibleNodes;
+            this.renderNodes(nodes);
+        }
+
+        this.pointBuffer.finalizeUpload();
+        this.profiler.stop('uploadnodes');
 
         // RENDER
         this.profiler.start('cleartextures');
@@ -265,23 +251,14 @@ export class ComputePointCloudRenderer {
         this.profiler.start('cleartextures');
         this.clearImageBuffer(this.pingPong(false));
         this.profiler.stop('cleartextures');
-        // this.swapImageBuffer();
-
-        this.profiler.start('uploadnodes');
-        for (const octree of traversalResult.octrees) {
-            let nodes = octree.visibleNodes;
-            this.renderOctree(octree, nodes, camera, target, params);
-        }
-        this.profiler.stop('uploadnodes');
 
         this.profiler.start('rendernew');
         this.renderPoints(camera);
         this.profiler.stop('rendernew');
-        this.pointBuffer.finishFrame();
 
-        this.profiler.start('cleardepth');
+        this.profiler.start('depthpass');
         this.depthPass(camera);
-        this.profiler.stop('cleardepth');
+        this.profiler.stop('depthpass');
 
         this.profiler.start('combine');
         this.resolveBuffer(camera);
@@ -290,20 +267,13 @@ export class ComputePointCloudRenderer {
         this.profiler.start('display');
         this.displayResult();
         this.profiler.stop('display');
-        // this.swapImageBuffer();
-
-        // CLEANUP
-        // gl.activeTexture(gl.TEXTURE1);
-        // gl.bindTexture(gl.TEXTURE_2D, null);
-
-        this.threeRenderer.state.reset();
     }
 
     reprojectLastFrame(camera) {
         this.reprojectShader.use();
 
         // Shift * Translate * Rotate. Works as long as not scaling is applied to the camera. (hope so)
-        const shiftedViewMatrix =  camera.matrixWorldInverse.clone().multiply(this.shiftMatrix);
+        const shiftedViewMatrix = camera.matrixWorldInverse.clone().multiply(this.shiftMatrix);
         const vp = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, shiftedViewMatrix);
         this.reprojectShader.setUniformMatrix4("viewProjectionMatrix", vp);
 
@@ -327,7 +297,7 @@ export class ComputePointCloudRenderer {
         this.pointCloudShader.setUniform1i("renderAmount", renderAmount);
 
         // Shift * Translate * Rotate. Works as long as not scaling is applied to the camera. (hope so)
-        const shiftedViewMatrix =  camera.matrixWorldInverse.clone().multiply(this.shiftMatrix);
+        const shiftedViewMatrix = camera.matrixWorldInverse.clone().multiply(this.shiftMatrix);
         const vp = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, shiftedViewMatrix);
         this.pointCloudShader.setUniformMatrix4("viewProjectionMatrix", vp);
 
@@ -352,13 +322,13 @@ export class ComputePointCloudRenderer {
         const numPixels = this.storageTexture[this.pingPong(false)].width
             * this.storageTexture[this.pingPong(false)].height;
 
-        this.gl.dispatchCompute(Math.ceil( numPixels / 256), 1, 1);
+        this.gl.dispatchCompute(Math.ceil(numPixels / 256), 1, 1);
 
         // depth pass
         this.depthPassShader.use();
 
         // Shift * Translate * Rotate. Works as long as not scaling is applied to the camera. (hope so)
-        const shiftedViewMatrix =  camera.matrixWorldInverse.clone().multiply(this.shiftMatrix);
+        const shiftedViewMatrix = camera.matrixWorldInverse.clone().multiply(this.shiftMatrix);
         const vp = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, shiftedViewMatrix);
         this.depthPassShader.setUniformMatrix4("viewProjectionMatrix", vp);
 
@@ -377,7 +347,7 @@ export class ComputePointCloudRenderer {
         this.resolveShader.use();
 
         // Shift * Translate * Rotate. Works as long as not scaling is applied to the camera. (hope so)
-        const shiftedViewMatrix =  camera.matrixWorldInverse.clone().multiply(this.shiftMatrix);
+        const shiftedViewMatrix = camera.matrixWorldInverse.clone().multiply(this.shiftMatrix);
         const vp = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, shiftedViewMatrix);
         this.resolveShader.setUniformMatrix4("viewProjectionMatrix", vp);
 

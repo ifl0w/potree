@@ -102,7 +102,7 @@ new Vue({
             <v-sheet color="transparent">
 
                 <v-row class="px-4">
-                    <v-col cols="4">
+                    <v-col cols="5">
                         <v-card class="fill-height">
                             <v-card-title>Performance</v-card-title>
 
@@ -112,24 +112,56 @@ new Vue({
                                     <v-list-item-subtitle>Number of frames per second</v-list-item-subtitle>
                                 </v-list-item-content>
                             </v-list-item>
-                            
+
                             <v-expansion-panels>
                                 <v-expansion-panel
                                         v-for="(v,k) in profilingResults"
                                         :key="k"
                                 >
-                                    <v-expansion-panel-header>{{k}} - GPU avg: {{v.gavg}}ms - CPU avg {{v.cavg}}</v-expansion-panel-header>
+                                    <v-expansion-panel-header>
+                                        <v-row no-gutters>
+                                            <v-col cols="4">
+                                                {{k}}
+                                            </v-col>
+                                            <v-col cols="4">
+                                                GPU {{v.gavg}}ms
+                                            </v-col>
+                                            <v-col cols="4">
+                                                CPU {{v.cavg}}ms
+                                            </v-col>
+                                        </v-row>
+                                    </v-expansion-panel-header>
                                     <v-expansion-panel-content>
-                                        <p>GPU - Min: {{v.gmin}}ms - Max: {{v.gmax}}ms</p>
-                                        <p>CPU - Min: {{v.cmin}}ms - Max: {{v.cmax}}ms</p>
+                                        <v-row no-gutters>
+                                            <v-col cols="4">
+                                                GPU
+                                            </v-col>
+                                            <v-col cols="4">
+                                                Min: {{v.gmin}}ms
+                                            </v-col>
+                                            <v-col cols="4">
+                                                Max: {{v.gmax}}ms
+                                            </v-col>
+                                        </v-row>
+                                        <v-row no-gutters>
+                                            <v-col cols="4">
+                                                CPU
+                                            </v-col>
+                                            <v-col cols="4">
+                                                Min: {{v.cmin}}ms
+                                            </v-col>
+                                            <v-col cols="4">
+                                                Max: {{v.cmax}}ms
+                                            </v-col>
+                                        </v-row>
                                     </v-expansion-panel-content>
                                 </v-expansion-panel>
                             </v-expansion-panels>
-                            
+
                         </v-card>
                     </v-col>
 
-                    <v-col cols="8">
+                    <v-col cols="7">
                         <v-card class="fill-height">
                             <v-card-title> Settings</v-card-title>
 
@@ -268,7 +300,7 @@ new Vue({
                     </v-col>
                 </v-row>
             </v-sheet>
-            
+
         </v-bottom-sheet>
     </v-content>
 </v-app>`

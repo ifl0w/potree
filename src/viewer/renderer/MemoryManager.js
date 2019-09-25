@@ -7,6 +7,7 @@ export class MemoryManagerEntry {
         this.isFree = true;
         this.next = null;
         this.lastAccess = 0;
+        this.importance = 0;
     }
 
     fit(size) {
@@ -19,6 +20,7 @@ export class MemoryManagerEntry {
 
         this.isFree = false;
         this.lastAccess = 0;
+        this.importance = 0;
         return this;
     }
 

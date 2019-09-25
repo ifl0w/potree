@@ -54,6 +54,7 @@ export class PointBuffer {
 
         return (poolSize / (1024 * 1024)).toFixed(2);
     }
+
     initDenseIdxSSBO() {
         this.distributeShader.use();
 
@@ -64,28 +65,20 @@ export class PointBuffer {
         this.gl.dispatchCompute(Math.ceil(this._gpuMemoryPoolSize / 256), 1, 1);
     }
 
-    finishFrame() {
-        if (this.memoryManager.utilization > 0.95) {
-            this.collectGarbage = true;
-        }
-
-        if (this.collectGarbage) {
-            const sorted = Array.from(this.uploadedNodes.entries()).sort((a,b) => b[1].lastAccess - a[1].lastAccess);
-
-            let garbage = sorted.pop();
-
-            // Stopping garbage collection if 25% of the memory is free to reduce processing time and to hold more data on the gpu
-            while (this.memoryManager.utilization > 0.75 && garbage[1].lastAccess < 0) {
-                this.memoryManager.free(garbage[1]);
-                this.uploadedNodes.delete(garbage[0]);
-                garbage = sorted.pop();
-            }
-        }
-
+    finalizeUpload() {
         // reduce last accessed count for all chunks
         this.uploadedNodes.forEach(entry => entry.lastAccess--);
+    }
 
-        this.collectGarbage = false;
+    collectGarbage() {
+        const sorted = Array.from(this.uploadedNodes.entries()).sort((a,b) => b[1].lastAccess - a[1].lastAccess);
+
+        let garbage = sorted.pop();
+
+        // Stopping garbage collection if 25% of the memory is free to reduce processing time and to hold more data on the gpu
+        this.memoryManager.free(garbage[1]);
+        this.uploadedNodes.delete(garbage[0]);
+        // garbage = sorted.pop();
     }
 
     clear() {
@@ -128,7 +121,9 @@ export class PointBuffer {
             this.uploadedNodes.set(nodeId, mme);
         } else {
             // no memory left in memory pool on gpu
-            this.collectGarbage = true;
+            // this.shouldCollectGarbage = true;
+            this.collectGarbage();
+            this.uploadNode(node); // retry
         }
     }
 
