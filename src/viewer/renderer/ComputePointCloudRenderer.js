@@ -35,6 +35,7 @@ export class ComputePointCloudRenderer {
         this.profiler = new Profiler(this.gl);
         this.profiler.create('cleartextures');
         this.profiler.create('reprojection');
+        this.profiler.create('uploadnodes');
         this.profiler.create('rendernew');
         this.profiler.create('cleardepth');
         this.profiler.create('combine');
@@ -210,6 +211,7 @@ export class ComputePointCloudRenderer {
                 this._fpsSum = 0;
 
                 this.profilingResults = this.profiler.collectAll();
+                console.log(this.profilingResults);
             }
         }
 
@@ -265,10 +267,12 @@ export class ComputePointCloudRenderer {
         this.profiler.stop('cleartextures');
         // this.swapImageBuffer();
 
+        this.profiler.start('uploadnodes');
         for (const octree of traversalResult.octrees) {
             let nodes = octree.visibleNodes;
             this.renderOctree(octree, nodes, camera, target, params);
         }
+        this.profiler.stop('uploadnodes');
 
         this.profiler.start('rendernew');
         this.renderPoints(camera);

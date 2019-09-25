@@ -98,15 +98,25 @@ class Marker {
     }
 
     resolveQueries() {
+        const cresult = performance.now() - this.cpuTimeStamp;
+        this.cmeasurements++;
+        this.cpuResults.push(cresult);
+        this.csum += cresult;
+        this.cmin = Math.min(this.cmin, cresult);
+        this.cmax = Math.max(this.cmax, cresult);
+
         this.queries.forEach(q => q.stop());
 
         this.queries.forEach((q, i) => {
             let result = q.result();
             if (result !== null) {
-                this.sum += result;
-                this.measurements++;
-                this.min = Math.min(this.min, result);
-                this.max = Math.max(this.max, result);
+                this.gmeasurements++;
+                this.gsum += result;
+                this.gmin = Math.min(this.gmin, result);
+                this.gmax = Math.max(this.gmax, result);
+
+                this.gpuResults.push(result);
+
                 q.delete();
                 this.queries.splice(i, 1);
             }
@@ -114,19 +124,38 @@ class Marker {
     }
 
     reset() {
-        this.min = Infinity; // minimum value of current queries
-        this.max = -Infinity; // maximum value of current queries
-        this.sum = 0; // sum of the finished query timings
-        this.measurements = 0;
+        this.gpuResults = [];
+        this.cpuResults = [];
+
+        this.gmin = Infinity; // minimum value of current queries
+        this.gmax = -Infinity; // maximum value of current queries
+        this.gsum = 0; // sum of the finished query timings
+        this.gmeasurements = 0;
+
+        this.cmin = Infinity; // minimum value of current queries
+        this.cmax = -Infinity; // maximum value of current queries
+        this.csum = 0; // sum of the finished query timings
+        this.cmeasurements = 0;
         this.lastCollect = performance.now(); // timestamp of last collect
     }
 
+    start() {
+        this.cpuTimeStamp = performance.now();
+    }
+
     collect() {
-        const avg = this.sum / this.measurements;
+        const gavg = this.gsum / this.gmeasurements;
+        const cavg = this.csum / this.cmeasurements;
         const result = {
-            avg: (avg / 1e6).toFixed(2),
-            min: (this.min / 1e6).toFixed(2),
-            max: (this.max / 1e6).toFixed(2) };
+            gavg: (gavg / 1e6).toFixed(2),
+            gmin: (this.gmin / 1e6).toFixed(2),
+            gmax: (this.gmax / 1e6).toFixed(2),
+            gResults: this.gpuResults,
+            cavg: cavg.toFixed(2),
+            cmin: this.cmin.toFixed(2),
+            cmax: this.cmax.toFixed(2),
+            cResults: this.cpuResults
+        };
         this.reset();
         return result;
     }
@@ -153,6 +182,7 @@ export class Profiler {
     start(name) {
         const marker = this.marker.get(name);
         marker.queries.push(new Query(this.gl, this.ext));
+        marker.start();
     }
 
     stop(name) {
@@ -160,7 +190,7 @@ export class Profiler {
         marker.resolveQueries();
     }
 
-    collectResults(name) {
+    collect(name) {
         const marker = this.marker.get(name);
         return marker.collect();
     }

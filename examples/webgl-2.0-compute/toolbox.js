@@ -118,8 +118,10 @@ new Vue({
                                         v-for="(v,k) in profilingResults"
                                         :key="k"
                                 >
-                                    <v-expansion-panel-header>{{k}} - Avg: {{v.avg}}ms - Min: {{v.min}}ms - Max: {{v.max}}ms</v-expansion-panel-header>
+                                    <v-expansion-panel-header>{{k}} - GPU avg: {{v.gavg}}ms - CPU avg {{v.cavg}}</v-expansion-panel-header>
                                     <v-expansion-panel-content>
+                                        <p>GPU - Min: {{v.gmin}}ms - Max: {{v.gmax}}ms</p>
+                                        <p>CPU - Min: {{v.cmin}}ms - Max: {{v.cmax}}ms</p>
                                     </v-expansion-panel-content>
                                 </v-expansion-panel>
                             </v-expansion-panels>
