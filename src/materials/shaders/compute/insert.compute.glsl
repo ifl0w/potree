@@ -29,26 +29,6 @@ layout(std140, binding=5) buffer DenseIndexBuffer
 
 
 layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
-/*
-vec4 unpackRGBA(int index) {
-    ivec4 packedColor = newColors[index >> 2];
-
-    int r = index % 4;
-    int tmp = packedColor.r;
-
-    if (r == 0) { tmp = packedColor.r; }
-    if (r == 1) { tmp = packedColor.g; }
-    if (r == 2) { tmp = packedColor.b; }
-    if (r == 3) { tmp = packedColor.a; }
-
-    vec4 c = vec4(0);
-    c.r = float((tmp & 0x000000FF)) / 255.0;
-    c.g = float((tmp & 0x0000FF00) >> 8) / 255.0;
-    c.b = float((tmp & 0x00FF0000) >> 16) / 255.0;
-    c.a = float((tmp & 0xFF000000) >> 24) / 255.0;
-
-    return c;
-}*/
 
 float getColorBits(int index) {
     uvec4 packedColor = newColors[index >> 2];
@@ -106,5 +86,4 @@ void main() {
     vec4 data = vec4(unpackPosition(int(linearIdx)).xyz, getColorBits(int(linearIdx)));
 
     points[storeIdx] = data;
-    //colors[storeIdx] = color;
 }
