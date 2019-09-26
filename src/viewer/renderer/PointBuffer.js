@@ -71,9 +71,15 @@ export class PointBuffer {
     }
 
     collectGarbage() {
-        const sorted = Array.from(this.uploadedNodes.entries()).sort((a,b) => b[1].lastAccess - a[1].lastAccess);
-
-        let garbage = sorted.pop();
+        let garbage = null;
+        Array.from(this.uploadedNodes.entries()).reduce((min, entry) => {
+            if (entry[1].lastAccess < min) {
+                garbage = entry;
+                return entry[1].lastAccess;
+            } else {
+                return min;
+            }
+        }, Infinity);
 
         // Stopping garbage collection if 25% of the memory is free to reduce processing time and to hold more data on the gpu
         this.memoryManager.free(garbage[1]);
