@@ -81,6 +81,10 @@ export class PointBuffer {
             }
         }, Infinity);
 
+        if (garbage === null) {
+            return;
+        }
+
         // Stopping garbage collection if 25% of the memory is free to reduce processing time and to hold more data on the gpu
         this.memoryManager.free(garbage[1]);
         this.uploadedNodes.delete(garbage[0]);

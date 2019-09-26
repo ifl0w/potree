@@ -7,7 +7,8 @@ new Vue({
 
         firstPersonControls: true,
 
-        refreshRate: 10, // hz
+        profile: true,
+        refreshRate: 1, // hz
         updateTimer: null,
 
         pointBudget: 10000000,
@@ -32,10 +33,12 @@ new Vue({
         this.updateTimer = setInterval(() => {
             if (!window.viewer) return;
 
-            this.fps = window.viewer.pRenderer.getFPS();
+            if (this.profile) {
+                this.fps = window.viewer.pRenderer.getFPS();
+                this.profilingResults = window.viewer.pRenderer.profilingResults;
+            }
             this.memoryUtilization = window.viewer.pRenderer.getMemoryUtilization();
             this.numUploadedNodes = window.viewer.pRenderer.numNodesUploaded;
-            this.profilingResults = window.viewer.pRenderer.profilingResults;
         }, (1 / this.refreshRate) * 1000);
 
         this.updatePointBudget();
@@ -104,60 +107,64 @@ new Vue({
                 <v-row class="px-4">
                     <v-col cols="5">
                         <v-card class="fill-height">
-                            <v-card-title>Performance</v-card-title>
-
-                            <v-list-item two-line>
-                                <v-list-item-content>
-                                    <v-list-item-title>{{fps}} FPS</v-list-item-title>
-                                    <v-list-item-subtitle>Number of frames per second</v-list-item-subtitle>
-                                </v-list-item-content>
-                            </v-list-item>
-
-                            <v-expansion-panels>
-                                <v-expansion-panel
-                                        v-for="(v,k) in profilingResults"
-                                        :key="k"
-                                >
-                                    <v-expansion-panel-header>
-                                        <v-row no-gutters>
-                                            <v-col cols="4">
-                                                {{k}}
-                                            </v-col>
-                                            <v-col cols="4">
-                                                GPU {{v.gavg}}ms
-                                            </v-col>
-                                            <v-col cols="4">
-                                                CPU {{v.cavg}}ms
-                                            </v-col>
-                                        </v-row>
-                                    </v-expansion-panel-header>
-                                    <v-expansion-panel-content>
-                                        <v-row no-gutters>
-                                            <v-col cols="4">
-                                                GPU
-                                            </v-col>
-                                            <v-col cols="4">
-                                                Min: {{v.gmin}}ms
-                                            </v-col>
-                                            <v-col cols="4">
-                                                Max: {{v.gmax}}ms
-                                            </v-col>
-                                        </v-row>
-                                        <v-row no-gutters>
-                                            <v-col cols="4">
-                                                CPU
-                                            </v-col>
-                                            <v-col cols="4">
-                                                Min: {{v.cmin}}ms
-                                            </v-col>
-                                            <v-col cols="4">
-                                                Max: {{v.cmax}}ms
-                                            </v-col>
-                                        </v-row>
-                                    </v-expansion-panel-content>
-                                </v-expansion-panel>
-                            </v-expansion-panels>
-
+                            <v-card-title>
+                                <span>Performance</span>
+                            </v-card-title>
+                            
+                            <v-card-text>
+                                <v-list-item two-line class="d-flex justify-space-between align-start">
+                                    <v-list-item-content>
+                                        <v-list-item-title>{{fps}} FPS</v-list-item-title>
+                                        <v-list-item-subtitle>Frames per Second</v-list-item-subtitle>
+                                    </v-list-item-content>
+                                    <v-switch v-model="profile" label="Automatic"></v-switch>
+                                </v-list-item>
+                                <v-expansion-panels>
+                                    <v-expansion-panel
+                                            v-for="(v,k) in profilingResults"
+                                            :key="k"
+                                    >
+                                        <v-expansion-panel-header>
+                                            <v-row no-gutters>
+                                                <v-col cols="4">
+                                                    {{k}}
+                                                </v-col>
+                                                <v-col cols="4">
+                                                    GPU {{v.gavg}}ms
+                                                </v-col>
+                                                <v-col cols="4">
+                                                    CPU {{v.cavg}}ms
+                                                </v-col>
+                                            </v-row>
+                                        </v-expansion-panel-header>
+                                        <v-expansion-panel-content>
+                                            <v-row no-gutters>
+                                                <v-col cols="4">
+                                                    GPU
+                                                </v-col>
+                                                <v-col cols="4">
+                                                    Min: {{v.gmin}}ms
+                                                </v-col>
+                                                <v-col cols="4">
+                                                    Max: {{v.gmax}}ms
+                                                </v-col>
+                                            </v-row>
+                                            <v-row no-gutters>
+                                                <v-col cols="4">
+                                                    CPU
+                                                </v-col>
+                                                <v-col cols="4">
+                                                    Min: {{v.cmin}}ms
+                                                </v-col>
+                                                <v-col cols="4">
+                                                    Max: {{v.cmax}}ms
+                                                </v-col>
+                                            </v-row>
+                                        </v-expansion-panel-content>
+                                    </v-expansion-panel>
+                                </v-expansion-panels>
+                            </v-card-text>
+                            
                         </v-card>
                     </v-col>
 

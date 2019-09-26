@@ -39,7 +39,6 @@ export class ComputePointCloudRenderer {
         this.profiler.create('depthpass');
         this.profiler.create('combine');
         this.profiler.create('display');
-        this.profilingResults = {};
 
         this.pointBuffer = new PointBuffer(this.gl, 25 * 1000 * 1000);
 
@@ -50,13 +49,6 @@ export class ComputePointCloudRenderer {
 
         this.toggle = 0;
         this.startIdx = 0;
-
-        this._fps = 0;
-        this._fpsSum = 0;
-        this._lastTimeStamp = -1;
-        this._fpsSamples = 0;
-        this._timePassed = 0;
-        this._fpsAverage = 0; // average over one second
     }
 
     initTextures() {
@@ -178,29 +170,6 @@ export class ComputePointCloudRenderer {
 
     }
 
-    _calculateFps() {
-        if (this._lastTimeStamp) {
-            const delta = performance.now() - this._lastTimeStamp;
-            this._fps = 1000 / delta;
-
-            this._timePassed += delta;
-            this._fpsSum += this._fps;
-            this._fpsSamples++;
-
-            if (this._timePassed > 1000) {
-                this._fpsAverage = this._fpsSum / 60;
-
-                this._fpsSamples = 0;
-                this._timePassed = 0;
-                this._fpsSum = 0;
-
-                this.profilingResults = this.profiler.collectAll();
-            }
-        }
-
-        this._lastTimeStamp = performance.now();
-    }
-
     shiftOrigin(camera) {
         if (this.shiftPosition) {
             const dist = this.shiftPosition.length() - camera.position.length();
@@ -218,7 +187,7 @@ export class ComputePointCloudRenderer {
     }
 
     render(scene, camera, target = null, params = {}) {
-        this._calculateFps();
+        this.profiler.newFrame();
 
         const gl = this.gl;
 
@@ -307,10 +276,7 @@ export class ComputePointCloudRenderer {
 
         this.gl.dispatchCompute(Math.ceil(renderAmount / 256), 1, 1);
 
-        this.startIdx += renderAmount;
-        if (this.startIdx >= this.pointBuffer.size) {
-            this.startIdx = 0;
-        }
+        this.startIdx = (this.startIdx + renderAmount) % this.pointPoolSize;
     }
 
     depthPass(camera) {
@@ -422,8 +388,7 @@ export class ComputePointCloudRenderer {
     }
 
     getFPS() {
-        // return this.fps.toFixed(2);
-        return this._fpsAverage.toFixed(2);
+        return this.profiler.getFPS();
     }
 
     // public interface
@@ -452,4 +417,7 @@ export class ComputePointCloudRenderer {
         this.initUBOs();
     }
 
+    get profilingResults() {
+        return this.profiler.collectAll();
+    }
 }

@@ -173,6 +173,9 @@ export class Profiler {
         // Clear the disjoint state before starting to work with queries to increase
         // the chances that the results will be valid.
         gl.getParameter(this.ext.GPU_DISJOINT_EXT);
+
+        this._fpsSamples = 0;
+        this._lastFPSTimeStamp = performance.now();
     }
 
     create(name) {
@@ -202,6 +205,18 @@ export class Profiler {
         });
 
         return result;
+    }
+
+    newFrame() {
+        this._fpsSamples++;
+    }
+
+    getFPS() {
+        const avgFPS = this._fpsSamples / ((performance.now() - this._lastFPSTimeStamp) / 1000);
+        this._lastFPSTimeStamp = performance.now();
+        this._fpsSamples = 0;
+
+        return avgFPS.toFixed(2);
     }
 
 }
