@@ -8,7 +8,7 @@ new Vue({
         firstPersonControls: true,
 
         profile: true,
-        refreshRate: 1, // hz
+        refreshRate: 5, // hz
         updateTimer: null,
 
         pointBudget: 10000000,

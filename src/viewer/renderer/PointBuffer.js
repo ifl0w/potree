@@ -67,15 +67,15 @@ export class PointBuffer {
 
     finalizeUpload() {
         // reduce last accessed count for all chunks
-        this.uploadedNodes.forEach(entry => entry.lastAccess--);
+        this.uploadedNodes.forEach(entry => entry.importance--);
     }
 
     collectGarbage() {
         let garbage = null;
         Array.from(this.uploadedNodes.entries()).reduce((min, entry) => {
-            if (entry[1].lastAccess < min) {
+            if (entry[1].importance < min) {
                 garbage = entry;
-                return entry[1].lastAccess;
+                return entry[1].importance;
             } else {
                 return min;
             }
@@ -105,7 +105,7 @@ export class PointBuffer {
 
         if (this.uploadedNodes.has(nodeId)) {
             // node already on gpu -> flag as accessed
-            this.uploadedNodes.get(nodeId).lastAccess = 1;
+            this.uploadedNodes.get(nodeId).importance = 1;
             return false;
         }
 

@@ -6,7 +6,7 @@ export class MemoryManagerEntry {
 
         this.isFree = true;
         this.next = null;
-        this.lastAccess = 0;
+        this.prev = null;
         this.importance = 0;
     }
 
@@ -16,10 +16,8 @@ export class MemoryManagerEntry {
 
     alloc(size) {
         this.split(size);
-        // this.next.merge(); // additional cleanup
 
         this.isFree = false;
-        this.lastAccess = 0;
         this.importance = 0;
         return this;
     }
@@ -32,17 +30,48 @@ export class MemoryManagerEntry {
     split(size) {
         const newNext = new MemoryManagerEntry(this.address + size, this.size - size);
         newNext.next = this.next;
+        newNext.prev = this;
+        if (this.next) {
+            this.next.prev = newNext;
+        }
 
         this.size = size;
         this.next = newNext;
     }
 
     merge() {
-        if (this.next && this.next.isFree) {
-            this.next.merge(); // recursively merge chunks
+        let prev = this.prev;
+        // never merge with the head element to ensure valid entry point for search
+        while (prev && prev.isFree && prev.prev) {
+            this.address = prev.address;
+            this.size = this.size + prev.size;
 
-            this.size = this.size + this.next.size;
-            this.next = this.next.next;
+            this.prev = prev.prev;
+            if (this.prev){
+                this.prev.next = this;
+            }
+
+            prev = prev.prev;
+        }
+
+        if (prev){
+            prev.next = this;
+        }
+
+        let next = this.next;
+        while (next && next.isFree) {
+            this.size = this.size + next.size;
+
+            this.next = next.next;
+            if (this.next){
+                this.next.prev = this;
+            }
+
+            next = next.next;
+        }
+
+        if (next){
+            next.prev = this;
         }
     }
 }
