@@ -3,6 +3,7 @@ import {PointCloudTree} from "./PointCloudTree.js";
 import {PointCloudOctreeNode} from "./PointCloudOctree.js";
 import {PointCloudArena4DNode} from "./arena4d/PointCloudArena4D.js";
 import {PointSizeType, PointColorType, ClipTask} from "./defines.js";
+import {LegacyProfiler} from "./viewer/renderer/LegacyProfiler";
 
 // Copied from three.js: WebGLRenderer.js
 function paramThreeToGL(_gl, p) {
@@ -550,6 +551,9 @@ export class Renderer {
 		this.glTypeMapping.set(Uint16Array, this.gl.UNSIGNED_SHORT);
 
 		this.toggle = 0;
+
+		this.profiler = new LegacyProfiler(this.gl);
+		this.profiler.create("render");
 	}
 
 	createBuffer(geometry){
@@ -1293,6 +1297,8 @@ export class Renderer {
 	}
 
 	render(scene, camera, target = null, params = {}) {
+		this.profiler.newFrame();
+		this.profiler.start("render");
 
 		const gl = this.gl;
 
@@ -1318,6 +1324,8 @@ export class Renderer {
 		gl.bindTexture(gl.TEXTURE_2D, null)
 
 		this.threeRenderer.state.reset();
+
+		this.profiler.stop("render");
 	}
 
 

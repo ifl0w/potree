@@ -39,6 +39,7 @@ export class ComputePointCloudRenderer {
         this.profiler.create('depthpass');
         this.profiler.create('combine');
         this.profiler.create('display');
+        // this.profiler.create('render');
 
         this.pointBuffer = new PointBuffer(this.gl, 25 * 1000 * 1000);
 
@@ -188,6 +189,7 @@ export class ComputePointCloudRenderer {
 
     render(scene, camera, target = null, params = {}) {
         this.profiler.newFrame();
+        this.profiler.start("render");
 
         const gl = this.gl;
 
@@ -236,6 +238,8 @@ export class ComputePointCloudRenderer {
         this.profiler.start('display');
         this.displayResult();
         this.profiler.stop('display');
+
+        this.profiler.stop("render");
     }
 
     reprojectLastFrame(camera) {

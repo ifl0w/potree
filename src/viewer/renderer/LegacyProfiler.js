@@ -1,3 +1,6 @@
+/**
+ * profiler that supports webgl (1) to support potree renderer
+ */
 class Query {
     constructor(gl, ext) {
         this.gl = gl;
@@ -6,15 +9,15 @@ class Query {
         this.useTimestamps = false;
         this.finished = false;
 
-        if (this.gl.getQuery(this.ext.TIMESTAMP_EXT, this.ext.QUERY_COUNTER_BITS_EXT) > 0) {
+        if (this.ext.getQueryEXT(this.ext.TIMESTAMP_EXT, this.ext.QUERY_COUNTER_BITS_EXT) > 0) {
             this.useTimestamps = true;
         }
 
         // create query
         if (this.useTimestamps) {
-            this.queries = [this.gl.createQuery(), this.gl.createQuery()];
+            this.queries = [this.ext.createQueryEXT(), this.ext.createQueryEXT()];
         } else {
-            this.queries = [this.gl.createQuery()];
+            this.queries = [this.ext.createQueryEXT()];
         }
 
         this.start();
@@ -23,12 +26,12 @@ class Query {
     start() {
         // start query
         if (this.useTimestamps) {
-            // startQuery = gl.createQuery();
-            // endQuery = gl.createQuery();
+            // startQuery = ext.createQueryEXT();
+            // endQuery = ext.createQueryEXT();
             this.ext.queryCounterEXT(this.queries[0], this.ext.TIMESTAMP_EXT);
         } else {
-            // timeElapsedQuery = gl.createQuery();
-            this.gl.beginQuery(this.ext.TIME_ELAPSED_EXT, this.queries[0]);
+            // timeElapsedQuery = ext.createQueryEXT();
+            this.ext.beginQueryEXT(this.ext.TIME_ELAPSED_EXT, this.queries[0]);
         }
     }
 
@@ -41,7 +44,7 @@ class Query {
         if (this.useTimestamps) {
             this.ext.queryCounterEXT(entry.queries[1], this.ext.TIMESTAMP_EXT);
         } else {
-            this.gl.endQuery(this.ext.TIME_ELAPSED_EXT);
+            this.ext.endQueryEXT(this.ext.TIME_ELAPSED_EXT);
         }
 
         this.finished = true;
@@ -58,10 +61,11 @@ class Query {
         if(!this.gl.getParameter(this.ext.GPU_DISJOINT_EXT)) {
             let available = false;
 
+
             if (this.useTimestamps) {
-                available = this.gl.getQueryParameter(this.queries[1], this.gl.QUERY_RESULT_AVAILABLE);
+                available = this.ext.getQueryObjectEXT(this.queries[1], this.ext.QUERY_RESULT_AVAILABLE_EXT);
             } else {
-                available = this.gl.getQueryParameter(this.queries[0], this.gl.QUERY_RESULT_AVAILABLE);
+                available = this.ext.getQueryObjectEXT(this.queries[0], this.ext.QUERY_RESULT_AVAILABLE_EXT);
             }
 
             if (!available) {
@@ -70,11 +74,11 @@ class Query {
 
             if (this.useTimestamps) {
                 // See how much time the rendering of the object took in nanoseconds.
-                const timeStart = this.gl.getQueryParameter(this.queries[0], this.gl.QUERY_RESULT);
-                const timeEnd = this.gl.getQueryParameter(this.queries[1], this.gl.QUERY_RESULT);
+                const timeStart = this.ext.getQueryObjectEXT(this.queries[0], this.ext.QUERY_RESULT_EXT);
+                const timeEnd = this.ext.getQueryObjectEXT(this.queries[1], this.ext.QUERY_RESULT_EXT);
                 timeElapsed = timeEnd - timeStart;
             } else {
-                timeElapsed = this.gl.getQueryParameter(this.queries[0], this.gl.QUERY_RESULT);
+                timeElapsed = this.ext.getQueryObjectEXT(this.queries[0], this.ext.QUERY_RESULT_EXT);
             }
 
             this.finished = false;
@@ -85,7 +89,7 @@ class Query {
     }
 
     delete() {
-        this.queries.forEach(q => this.gl.deleteQuery(q));
+        this.queries.forEach(q => this.ext.deleteQueryEXT(q));
     }
 }
 
@@ -161,14 +165,14 @@ class Marker {
     }
 }
 
-export class Profiler {
+export class LegacyProfiler {
 
     constructor(gl) {
         this.gl = gl;
 
         this.marker = new Map();
 
-        this.ext = gl.getExtension('EXT_disjoint_timer_query_webgl2');
+        this.ext = gl.getExtension('EXT_disjoint_timer_query');
 
         // Clear the disjoint state before starting to work with queries to increase
         // the chances that the results will be valid.
@@ -184,23 +188,17 @@ export class Profiler {
 
     start(name) {
         const marker = this.marker.get(name);
-        if (!marker) return;
-
         marker.queries.push(new Query(this.gl, this.ext));
         marker.start();
     }
 
     stop(name) {
         const marker = this.marker.get(name);
-        if (!marker) return;
-
         marker.resolveQueries();
     }
 
     collect(name) {
         const marker = this.marker.get(name);
-        if (!marker) return;
-
         return marker.collect();
     }
 
