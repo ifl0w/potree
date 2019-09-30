@@ -15,7 +15,7 @@ export class PointBuffer {
 
         this.memoryManager = new MemoryManager(size);
 
-        this.denseIdxSSBO = new SSBO(gl, this._gpuMemoryPoolSize, 1, 16); // 16 bytes because of packing (can be optimized)
+        this.denseIdxSSBO = new SSBO(gl, this._gpuMemoryPoolSize, 1, 4); // 16 bytes because of packing (can be optimized)
         this.streamPositionsSSBO = new SSBO(gl, streamSize, 3, 4);
         this.streamColorSSBO = new SSBO(gl, streamSize, 4, 4);
         // position pool containing vec4

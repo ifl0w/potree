@@ -22,7 +22,7 @@ layout(std140, binding=4) buffer NewColorBuffer
     uvec4 newColors[];
 };
 
-layout(std140, binding=5) buffer DenseIndexBuffer
+layout(std430, binding=5) buffer DenseIndexBuffer
 {
     uint indices[];
 };
